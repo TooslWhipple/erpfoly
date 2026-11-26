@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/router";
 import {
   Alert,
+  Box,
   Button,
   CircularProgress,
   Divider,
@@ -57,12 +58,14 @@ import {
   toPeriodValue,
   type SellerPeriodOption,
   type SellerPeriodValue,
+  splitDailyProgress,
 } from "@/utils/sellerPeriods";
 import {
   ChartCard,
 } from "@/styles/catalogos/vendedores.styles";
 import { theme } from "@/styles/theme";
 import { formatDate } from "@/utils/date";
+import { formatPercent } from "@/utils/number";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 const CHART_PRIMARY = "#2663EB";
@@ -264,6 +267,11 @@ export default function VendedorDetailPage() {
 
   const showLoading = detailQuery.isPending && validId !== null;
 
+  // Without daily points (an API that predates them) the cards fall back to their synthetic curve.
+  const dailySeries = detail?.dailyProgress?.length
+    ? splitDailyProgress(detail.dailyProgress)
+    : undefined;
+
   const donutData =
     detail != null
       ? [
@@ -305,25 +313,24 @@ export default function VendedorDetailPage() {
   return (
     <Stack spacing={3}>
       <Stack
-        direction={{
-          xs: "column",
-          md: "row",
-        }}
-        justifyContent={{
-          xs: "flex-start",
-          md: "space-between",
-        }}
+        direction="row"
+        justifyContent="space-between"
         alignItems="center"
-        spacing={2}
+        spacing={1}
+        sx={{ minWidth: 0 }}
       >
-        <Breadcrumbs items={breadcrumbItems} />
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Breadcrumbs items={breadcrumbItems} />
+        </Box>
 
         {detail != null && (
-          <StatusChip
-            label={detail.status === "ACTIVE" ? "Activo" : "Inactivo"}
-            variant={detail.status === "ACTIVE" ? "success" : "default"}
-            size="small"
-          />
+          <Box sx={{ flexShrink: 0 }}>
+            <StatusChip
+              label={detail.status === "ACTIVE" ? "Activo" : "Inactivo"}
+              variant={detail.status === "ACTIVE" ? "success" : "default"}
+              size="small"
+            />
+          </Box>
         )}
       </Stack>
 
@@ -377,6 +384,7 @@ export default function VendedorDetailPage() {
                   thisMonth={detail.currentMonthSales}
                   goal={detail.currentMonthGoal}
                   periodLabel={periodCardLabel(detail.period)}
+                  series={dailySeries?.sales}
                 />
               </Grid>
               <Grid
@@ -428,7 +436,7 @@ export default function VendedorDetailPage() {
                             color={theme.palette.text.secondary}
                           />
                           <Typography variant="h4">
-                            {detail.goalProgressPercent}%
+                            {formatPercent(detail.goalProgressPercent)}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             Meta alcanzada
@@ -471,6 +479,7 @@ export default function VendedorDetailPage() {
                 <CreditsMonthGoalCard
                   thisMonth={detail.currentMonthApprovedCredits}
                   goal={detail.currentMonthCreditGoal}
+                  series={dailySeries?.approvedCredits}
                 />
               </Grid>
               <Grid
@@ -482,6 +491,7 @@ export default function VendedorDetailPage() {
                 <NewCreditsMonthGoalCard
                   thisMonth={detail.currentMonthApprovedNewCreditsAmount}
                   goal={detail.currentMonthNewCreditsGoal}
+                  series={dailySeries?.newCreditsAmount}
                 />
               </Grid>
             </Grid>
@@ -507,7 +517,8 @@ export default function VendedorDetailPage() {
               alignItems="center"
               justifyContent="space-between"
               spacing={2}
-              flexWrap="nowrap"
+              useFlexGap
+              flexWrap="wrap"
             >
               <Typography variant="h6">
                 Historial de ventas · {detail.period.label} {detail.period.year}

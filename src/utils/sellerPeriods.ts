@@ -1,4 +1,7 @@
-import type { SellerDashboardPeriod } from "@/types/sellers.types";
+import type {
+  SellerDailyProgressPoint,
+  SellerDashboardPeriod,
+} from "@/types/sellers.types";
 
 export const MONTH_LABELS = [
   "Enero",
@@ -68,4 +71,21 @@ export function buildSellerPeriodOptions(
 /** Label for the KPI cards: "Este mes" for the current month, else the month name. */
 export function periodCardLabel(period: SellerDashboardPeriod): string {
   return period.isCurrent ? "Este mes" : `${period.label} ${period.year}`;
+}
+
+export interface SellerDailySeries {
+  sales: Array<number | null>;
+  approvedCredits: Array<number | null>;
+  newCreditsAmount: Array<number | null>;
+}
+
+/** One series per goal card from the daily points of the dashboard. */
+export function splitDailyProgress(
+  points: SellerDailyProgressPoint[],
+): SellerDailySeries {
+  return {
+    sales: points.map((point) => point.sales),
+    approvedCredits: points.map((point) => point.approvedCredits),
+    newCreditsAmount: points.map((point) => point.newCreditsAmount),
+  };
 }

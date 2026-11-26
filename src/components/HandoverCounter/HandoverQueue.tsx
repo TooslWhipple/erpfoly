@@ -40,7 +40,7 @@ export interface HandoverQueueProps {
   branchId: number | null;
   /** `ANY` incluye órdenes por surtir o en camino. */
   readiness: QueueReadiness;
-  onOpenSale: (saleId: number) => void;
+  onOpenSale: (saleId: number, deliveryBranchId?: number) => void;
 }
 
 export function HandoverQueue({
@@ -160,9 +160,9 @@ export function HandoverQueue({
         <Stack spacing={1.5} sx={{ opacity: isFetching ? 0.6 : 1 }}>
           {rows.map((row) => (
             <HandoverQueueCard
-              key={row.saleId}
+              key={`${row.saleId}-${row.deliveryBranch?.id ?? 0}`}
               row={row}
-              onOpen={() => onOpenSale(row.saleId)}
+              onOpen={() => onOpenSale(row.saleId, row.deliveryBranch?.id)}
             />
           ))}
         </Stack>

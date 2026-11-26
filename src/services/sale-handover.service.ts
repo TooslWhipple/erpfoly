@@ -129,12 +129,19 @@ export function updateHandoverReceiver(
   });
 }
 
+/** Toda la venta o, con `saleItemId`, un solo artículo (FOLY-276). */
+function deliveryBranchPath(saleId: number, saleItemId?: number): string {
+  const item = saleItemId !== undefined ? `/items/${saleItemId}` : "";
+  return `${BASE}/sales/${saleId}${item}/delivery-branch`;
+}
+
 export function getDeliveryBranchAvailability(
   saleId: number,
   branchId: number,
+  saleItemId?: number,
 ): Promise<ApiResult<DeliveryBranchAvailability>> {
   return get<DeliveryBranchAvailability>(
-    `${BASE}/sales/${saleId}/delivery-branch/availability?branchId=${branchId}`,
+    `${deliveryBranchPath(saleId, saleItemId)}/availability?branchId=${branchId}`,
     { skipGlobalErrorToast: true },
   );
 }
@@ -142,9 +149,10 @@ export function getDeliveryBranchAvailability(
 export function changeDeliveryBranch(
   saleId: number,
   payload: ChangeDeliveryBranchRequest,
+  saleItemId?: number,
 ): Promise<ApiResult<ChangeDeliveryBranchResponse>> {
   return patch<ChangeDeliveryBranchResponse>(
-    `${BASE}/sales/${saleId}/delivery-branch`,
+    deliveryBranchPath(saleId, saleItemId),
     payload,
     { skipGlobalErrorToast: true },
   );

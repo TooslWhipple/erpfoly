@@ -33,10 +33,15 @@ export default function EntregasPage() {
       ? selectedBranchId
       : null;
 
-  const handleOpenSale = (saleId: number) => {
+  // FOLY-276: una venta puede listarse en varias ubicaciones; se abre en la
+  // de la fila.
+  const handleOpenSale = (saleId: number, deliveryBranchId?: number) => {
     void router.push({
       pathname: "/entregas/[saleId]",
-      query: { saleId: String(saleId) },
+      query: {
+        saleId: String(saleId),
+        ...(deliveryBranchId ? { branchId: String(deliveryBranchId) } : {}),
+      },
     });
   };
 

@@ -114,6 +114,8 @@ export type HandoverLine = {
   released: number;
   ready: number;
   pendingSupply: number;
+  /** FOLY-276: ubicación donde se entrega este artículo. */
+  deliveryBranch: DeliveryBranch | null;
 };
 
 /** Autorización de la venta aún vigente; permite rehidratar el respaldo al recargar. */

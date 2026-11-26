@@ -1,4 +1,7 @@
-export { buildProgressData } from "./buildProgressData";
+export { buildProgressData, progressDataFromDailySeries } from "./buildProgressData";
+export type { ProgressChartPoint } from "./buildProgressData";
+export { MonthGoalProgressChart } from "./MonthGoalProgressChart";
+export type { MonthGoalProgressChartProps } from "./MonthGoalProgressChart";
 export { SalesDashboardChartTooltip } from "./SalesDashboardChartTooltip";
 export { SalesMonthGoalCard } from "./SalesMonthGoalCard";
 export type { SalesMonthGoalCardProps } from "./SalesMonthGoalCard";

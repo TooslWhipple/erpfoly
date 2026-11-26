@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   buildSellerPeriodOptions,
   periodCardLabel,
+  splitDailyProgress,
   toPeriodValue,
 } from "./sellerPeriods";
 
@@ -63,5 +64,19 @@ describe("periodCardLabel", () => {
       periodCardLabel({ year: 2026, month: 9, label: "Septiembre", isCurrent: false }),
       "Septiembre 2026",
     );
+  });
+});
+
+describe("splitDailyProgress", () => {
+  it("separa una serie por tarjeta y conserva los días por venir en null", () => {
+    const series = splitDailyProgress([
+      { day: 1, sales: 0, approvedCredits: 0, newCreditsAmount: 0 },
+      { day: 2, sales: 4700, approvedCredits: 1, newCreditsAmount: 20000 },
+      { day: 3, sales: null, approvedCredits: null, newCreditsAmount: null },
+    ]);
+
+    assert.deepEqual(series.sales, [0, 4700, null]);
+    assert.deepEqual(series.approvedCredits, [0, 1, null]);
+    assert.deepEqual(series.newCreditsAmount, [0, 20000, null]);
   });
 });

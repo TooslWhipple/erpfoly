@@ -375,12 +375,16 @@ export default function OrderForm({
           stock: row.destinationStock ?? 0,
           inTransit: row.destinationInTransit ?? 0,
         },
-        branch?.name,
+        {
+          destinationName: branch?.name,
+          originName: originBranch?.name,
+          originStock: row.inStock,
+        },
       );
       if (result) feedback.set(row.id, result);
     }
     return feedback;
-  }, [isInternalOrder, selectedItems, productRows, branch?.name]);
+  }, [isInternalOrder, selectedItems, productRows, branch?.name, originBranch?.name]);
   const hasCapacityErrors = useMemo(
     () =>
       Array.from(transferFeedbackByProduct.values()).some(

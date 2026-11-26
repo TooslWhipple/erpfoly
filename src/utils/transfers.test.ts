@@ -135,7 +135,7 @@ describe("getTransferQuantityFeedback", () => {
     assert.equal(getTransferQuantityFeedback(5, cap(5)), null);
   });
   it("sobre el límite da error con el texto exacto", () => {
-    assert.deepEqual(getTransferQuantityFeedback(6, cap(5), "FOLY ALTAMIRA"), {
+    assert.deepEqual(getTransferQuantityFeedback(6, cap(5), { destinationName: "FOLY ALTAMIRA" }), {
       level: "error",
       message: "Excede el máximo permitido. Capacidad restante en FOLY ALTAMIRA: 5 unidades",
     });
@@ -145,7 +145,7 @@ describe("getTransferQuantityFeedback", () => {
     assert.match(getTransferQuantityFeedback(1, cap(0))?.message ?? "", /: 0 unidades$/);
   });
   it("avisa cuántas unidades faltan para el mínimo, contando existencia y tránsito", () => {
-    assert.deepEqual(getTransferQuantityFeedback(1, cap(5, 4, 1, 1), "FOLY AEROPUERTO"), {
+    assert.deepEqual(getTransferQuantityFeedback(1, cap(5, 4, 1, 1), { destinationName: "FOLY AEROPUERTO" }), {
       level: "warning",
       message:
         "Atención: para cumplir con el mínimo en FOLY AEROPUERTO (4), debes enviar al menos 2 unidades",
@@ -163,6 +163,47 @@ describe("getTransferQuantityFeedback", () => {
   });
   it("sin aviso cuando el mínimo es 0", () => {
     assert.equal(getTransferQuantityFeedback(1, cap(null, 0, 0, 0)), null);
+  });
+
+  describe("existencia del origen", () => {
+    const origin = { originName: "CEDIS", originStock: 1 };
+    it("caso del reporte: existencia 1, pide 3, bloquea con el texto exacto", () => {
+      assert.deepEqual(getTransferQuantityFeedback(3, cap(null), origin), {
+        level: "error",
+        message: "No hay existencia suficiente en CEDIS. Existencia: 1 unidad",
+      });
+    });
+    it("igual a la existencia pasa", () => {
+      assert.equal(getTransferQuantityFeedback(1, cap(null), origin), null);
+    });
+    it("sin existencia usa plural y bloquea", () => {
+      assert.match(
+        getTransferQuantityFeedback(1, cap(null), { originStock: 0 })?.message ?? "",
+        /^No hay existencia suficiente en el origen\. Existencia: 0 unidades$/,
+      );
+    });
+    it("si excede los dos, muestra el límite más bajo", () => {
+      assert.match(
+        getTransferQuantityFeedback(9, cap(5), { originStock: 2 })?.message ?? "",
+        /^No hay existencia suficiente/,
+      );
+      assert.match(
+        getTransferQuantityFeedback(9, cap(2), { originStock: 5 })?.message ?? "",
+        /^Excede el máximo permitido/,
+      );
+    });
+    it("bloquea aunque el mínimo pida más de lo que hay", () => {
+      assert.equal(
+        getTransferQuantityFeedback(2, cap(null, 5, 0, 0), origin)?.level,
+        "error",
+      );
+    });
+    it("con poca existencia, enviarla toda deja el aviso de mínimo", () => {
+      assert.equal(
+        getTransferQuantityFeedback(1, cap(null, 5, 0, 0), origin)?.level,
+        "warning",
+      );
+    });
   });
 });
 

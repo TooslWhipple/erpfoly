@@ -1,9 +1,13 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Visibility as ViewIcon } from "@mui/icons-material";
-import { Title, TabFilters, TableCrud } from "@/components";
+import { StatusChip, Title, TabFilters, TableCrud } from "@/components";
 import type { Column, RowAction } from "@/components";
 import type { StatusChipVariant } from "@/components/TableCrud";
+import {
+  CLIENT_STATUS_LABELS,
+  CLIENT_STATUS_VARIANTS,
+} from "@/utils/clientStatus";
 import { CUSTOMERS_READ } from "@/lib/permissions";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
@@ -12,6 +16,7 @@ import {
   type Client,
   type ClientSortField,
   type ClientSortOrder,
+  type ClientCreditStatus,
   type ClientStatus,
   type ClientType,
 } from "@/services/clients.service";
@@ -32,25 +37,30 @@ const STATUS_TABS: {
     value: "active",
   },
   {
-    label: "Inactivos",
-    value: "inactive",
-  },
-  {
     label: "Bloqueados",
     value: "blocked",
   },
+  {
+    label: "Cesados",
+    value: "cesado",
+  },
+  {
+    label: "Cancelados",
+    value: "cancelado",
+  },
 ];
 
-const STATUS_CHIP_LABELS: Record<string, string> = {
-  active: "Activo",
-  inactive: "Inactivo",
-  blocked: "Bloqueado",
-};
+const CREDIT_STATUS_LABELS = {
+  ACTIVE: "Al corriente",
+  MOROSO: "Moroso",
+} as const;
 
-const STATUS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
-  active: "success",
-  inactive: "default",
-  blocked: "error",
+const CREDIT_STATUS_VARIANTS: Record<
+  keyof typeof CREDIT_STATUS_LABELS,
+  StatusChipVariant
+> = {
+  ACTIVE: "success",
+  MOROSO: "error",
 };
 
 const CLIENT_TYPE_CHIP_LABELS: Record<ClientType, string> = {
@@ -103,8 +113,32 @@ const columns: Column<Client>[] = [
     label: "Estatus",
     type: "chip",
     size: "sm",
-    chipLabelMap: STATUS_CHIP_LABELS,
-    chipVariantMap: STATUS_CHIP_VARIANTS,
+    chipLabelMap: CLIENT_STATUS_LABELS,
+    chipVariantMap: CLIENT_STATUS_VARIANTS,
+  },
+  {
+    id: "creditStatus",
+    label: "Estatus de crédito",
+    size: "md",
+    format: (value, row) => {
+      if (row.clientType === "CASH") {
+        return "—";
+      }
+      if (value == null) {
+        return "—";
+      }
+      const key = String(value) as ClientCreditStatus;
+      if (key !== "ACTIVE" && key !== "MOROSO") {
+        return "—";
+      }
+      return (
+        <StatusChip
+          label={CREDIT_STATUS_LABELS[key]}
+          variant={CREDIT_STATUS_VARIANTS[key]}
+          size="small"
+        />
+      );
+    },
   },
   {
     id: "primaryAddressFormatted",

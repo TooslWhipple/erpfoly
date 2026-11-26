@@ -5581,13 +5581,15 @@ export function SaleBuilder({
                   size: "sm",
                   chipLabelMap: {
                     active: "Activo",
-                    inactive: "Inactivo",
                     blocked: "Bloqueado",
+                    cesado: "Cesado",
+                    cancelado: "Cancelado",
                   },
                   chipVariantMap: {
                     active: "success",
-                    inactive: "default",
                     blocked: "error",
+                    cesado: "warning",
+                    cancelado: "default",
                   },
                 },
                 {

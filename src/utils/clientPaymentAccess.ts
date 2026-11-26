@@ -1,4 +1,5 @@
 import type { ClientStatus } from "@/types/clientes.types";
+import { isClientActive } from "./clientStatus";
 import type { BackendSaleCreditActiveItem } from "@/types/clientPayment.types";
 import type { OpenClientLayaway } from "@/services/ventas.service";
 import { isCreditClient } from "./client";
@@ -15,8 +16,7 @@ export function getClientPaymentAccessDenial(input: {
   /** Apartados abiertos del cliente en la sucursal activa (cobrables aunque sea de contado). */
   openLayaways?: Pick<OpenClientLayaway, "totalDue">[];
 }): ClientPaymentAccessDenialReason | null {
-  const status = input.status ?? "active";
-  if (status !== "active") {
+  if (!isClientActive(input.status)) {
     return "inactive";
   }
 

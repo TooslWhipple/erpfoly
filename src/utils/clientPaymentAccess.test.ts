@@ -65,7 +65,7 @@ describe("getClientPaymentAccessDenial", () => {
     assert.equal(
       getClientPaymentAccessDenial({
         creditApplicationId: null,
-        status: "inactive",
+        status: "cesado",
         activeCredits: [],
         openLayaways: layaway,
       }),

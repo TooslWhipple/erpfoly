@@ -4,10 +4,8 @@ import {
   Alert,
   Button,
   CircularProgress,
-  FormControlLabel,
   MenuItem,
   Stack,
-  Switch,
   TextField,
 } from "@mui/material";
 import { Title } from "@/components";
@@ -25,7 +23,6 @@ export default function EntregasPage() {
   } = useHandoverBranches();
   // `null` = «Todas las sucursales» (se omite `branchId` en la cola).
   const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
-  const [includeUpcoming, setIncludeUpcoming] = useState(true);
 
   const branchId =
     selectedBranchId !== null &&
@@ -33,10 +30,15 @@ export default function EntregasPage() {
       ? selectedBranchId
       : null;
 
-  const handleOpenSale = (saleId: number) => {
+  // FOLY-276: una venta puede listarse en varias ubicaciones; se abre en la
+  // de la fila.
+  const handleOpenSale = (saleId: number, deliveryBranchId?: number) => {
     void router.push({
       pathname: "/entregas/[saleId]",
-      query: { saleId: String(saleId) },
+      query: {
+        saleId: String(saleId),
+        ...(deliveryBranchId ? { branchId: String(deliveryBranchId) } : {}),
+      },
     });
   };
 
@@ -93,19 +95,9 @@ export default function EntregasPage() {
                 </MenuItem>
               ))}
             </TextField>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={includeUpcoming}
-                  onChange={(event) => setIncludeUpcoming(event.target.checked)}
-                />
-              }
-              label="Incluir por surtir / en camino"
-            />
           </Stack>
           <HandoverQueue
             branchId={branchId}
-            readiness={includeUpcoming ? "ANY" : "READY"}
             onOpenSale={handleOpenSale}
           />
         </>

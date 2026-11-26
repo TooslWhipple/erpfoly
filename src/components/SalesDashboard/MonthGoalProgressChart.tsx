@@ -77,7 +77,14 @@ export function MonthGoalProgressChart({
     : buildProgressData(thisMonth, goal);
 
   return (
-    <Stack height="100%" minHeight={104} justifyContent="flex-end">
+    <Stack
+      width="100%"
+      minWidth={0}
+      overflow="hidden"
+      height="100%"
+      minHeight={104}
+      justifyContent="flex-end"
+    >
       <ResponsiveContainer width="100%" height={104}>
         <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
           <defs>
@@ -101,7 +108,8 @@ export function MonthGoalProgressChart({
             minTickGap={12}
           />
           <YAxis
-            tick={{ fontSize: 10 }}
+            width={40}
+            tick={{ fontSize: 10, fill: theme.palette.text.secondary }}
             tickLine={false}
             axisLine={false}
             allowDecimals={false}

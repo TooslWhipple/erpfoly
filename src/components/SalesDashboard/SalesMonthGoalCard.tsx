@@ -1,4 +1,4 @@
-import { Grid, Stack, Typography } from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
 import numeral from "numeral";
 import { BadgeDollarSign } from "lucide-react";
 import { Card } from "@/styles/catalogos/goals.styles";
@@ -22,34 +22,42 @@ export function SalesMonthGoalCard({
 }: SalesMonthGoalCardProps) {
   return (
     <Card>
-      <Grid container width="100%" spacing={2} alignItems="center">
-        <Grid size={{ xs: 12, md: 3 }}>
+      <Box
+        sx={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          gap: 2,
+          width: "100%",
+        }}
+      >
+        <Stack direction="row" spacing={3} useFlexGap sx={{ flex: "1 1 auto" }}>
           <Stack spacing={0.5}>
             <BadgeDollarSign strokeWidth={2} size={16} color={theme.palette.text.secondary} />
-            <Typography variant="h4" fontWeight={600}>{numeral(thisMonth).format("$0,0.00")}</Typography>
+            <Typography variant="h4" fontWeight={600} sx={{ whiteSpace: "nowrap" }}>
+              {numeral(thisMonth).format("$0,0.00")}
+            </Typography>
             <Typography variant="body2" color="text.secondary">{periodLabel}</Typography>
           </Stack>
-        </Grid>
-        <Grid size={{ xs: 12, md: 3 }}>
           <Stack spacing={0.5}>
             <BadgeDollarSign strokeWidth={2} size={16} color={theme.palette.text.secondary} />
-            <Typography variant="h4" fontWeight={600}>
+            <Typography variant="h4" fontWeight={600} sx={{ whiteSpace: "nowrap" }}>
               {numeral(goal).format("$0,0.00")}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Meta
             </Typography>
           </Stack>
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        </Stack>
+        <Box sx={{ flex: "1 1 220px", minWidth: 0, overflow: "hidden" }}>
           <MonthGoalProgressChart
             series={series}
             thisMonth={thisMonth}
             goal={goal}
             formatValue={(v) => numeral(v).format("$0,0.00")}
           />
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
     </Card>
   );
 }

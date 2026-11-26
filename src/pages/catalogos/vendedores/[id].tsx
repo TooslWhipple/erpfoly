@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/router";
 import {
   Alert,
+  Box,
   Button,
   CircularProgress,
   Divider,
@@ -312,25 +313,24 @@ export default function VendedorDetailPage() {
   return (
     <Stack spacing={3}>
       <Stack
-        direction={{
-          xs: "column",
-          md: "row",
-        }}
-        justifyContent={{
-          xs: "flex-start",
-          md: "space-between",
-        }}
+        direction="row"
+        justifyContent="space-between"
         alignItems="center"
-        spacing={2}
+        spacing={1}
+        sx={{ minWidth: 0 }}
       >
-        <Breadcrumbs items={breadcrumbItems} />
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Breadcrumbs items={breadcrumbItems} />
+        </Box>
 
         {detail != null && (
-          <StatusChip
-            label={detail.status === "ACTIVE" ? "Activo" : "Inactivo"}
-            variant={detail.status === "ACTIVE" ? "success" : "default"}
-            size="small"
-          />
+          <Box sx={{ flexShrink: 0 }}>
+            <StatusChip
+              label={detail.status === "ACTIVE" ? "Activo" : "Inactivo"}
+              variant={detail.status === "ACTIVE" ? "success" : "default"}
+              size="small"
+            />
+          </Box>
         )}
       </Stack>
 
@@ -517,7 +517,8 @@ export default function VendedorDetailPage() {
               alignItems="center"
               justifyContent="space-between"
               spacing={2}
-              flexWrap="nowrap"
+              useFlexGap
+              flexWrap="wrap"
             >
               <Typography variant="h6">
                 Historial de ventas · {detail.period.label} {detail.period.year}

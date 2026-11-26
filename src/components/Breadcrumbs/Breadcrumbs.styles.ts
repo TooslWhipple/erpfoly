@@ -2,12 +2,10 @@ import { styled } from "@mui/material/styles";
 import { Box, IconButton, Typography } from "@mui/material";
 
 const breadcrumbLabel = {
-  maxWidth: 280,
+  minWidth: 0,
   overflow: "hidden",
-  display: "-webkit-box",
-  WebkitLineClamp: 2,
-  WebkitBoxOrient: "vertical" as const,
-  overflowWrap: "anywhere" as const,
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap" as const,
   lineHeight: 1.35,
 };
 
@@ -16,6 +14,8 @@ export const Container = styled(Box)({
   alignItems: "center",
   gap: 4,
   minWidth: 0,
+  maxWidth: "100%",
+  overflow: "hidden",
 });
 
 export const BackButton = styled(IconButton)(({ theme }) => ({

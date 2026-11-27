@@ -1,15 +1,16 @@
 export const DISCONTINUED_CHIP_LABEL = "En liquidación / Descontinuado";
-export const LIQUIDATION_CHIP_LABEL = "Liquidación";
 export const DISCONTINUED_SALE_WARNING =
   "Producto en liquidación/descontinuado: No volverá a recibirse";
 export const RED_PAPER_PRINT_WARNING =
   "Este artículo está en liquidación. Inserta el rollo de papel ROJO en la impresora antes de imprimir.";
 
+/**
+ * Chip for the POS. Liquidation is end of life, so it comes only from
+ * `isDiscontinued`, the same flag the catalog, inventory and labels read
+ * (FOLY-274).
+ */
 export function saleLifecycleChipLabel(item: {
   isDiscontinued?: boolean;
-  isLiquidation?: boolean;
 }): string | null {
-  if (item.isDiscontinued) return DISCONTINUED_CHIP_LABEL;
-  if (item.isLiquidation) return LIQUIDATION_CHIP_LABEL;
-  return null;
+  return item.isDiscontinued ? DISCONTINUED_CHIP_LABEL : null;
 }

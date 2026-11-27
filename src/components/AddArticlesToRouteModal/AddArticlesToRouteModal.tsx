@@ -343,6 +343,7 @@ export function AddOrdersToRouteModal({
     selectedIds: Set<string>,
     onToggle: (id: string) => void,
     dateHeader: string,
+    showPickupAddress = false,
   ) => (
     <TableContainer>
       <Table stickyHeader size="small">
@@ -353,6 +354,11 @@ export function AddOrdersToRouteModal({
             <StyledTableCell sx={{ minWidth: "140px" }}>SKU</StyledTableCell>
             <StyledTableCell sx={{ minWidth: "240px" }}>Artículo</StyledTableCell>
             <StyledTableCell sx={{ minWidth: "160px" }}>Zona</StyledTableCell>
+            {showPickupAddress && (
+              <StyledTableCell sx={{ minWidth: "220px" }}>
+                Dirección de recolección
+              </StyledTableCell>
+            )}
             <StyledTableCell sx={{ minWidth: "160px" }}>{dateHeader}</StyledTableCell>
           </TableRow>
         </TableHead>
@@ -383,6 +389,26 @@ export function AddOrdersToRouteModal({
                 <StyledTableCell>
                   <LogisticZoneBadge label={row.zone} color={row.zoneColor} />
                 </StyledTableCell>
+                {showPickupAddress && (
+                  <StyledTableCell sx={{ maxWidth: 260 }}>
+                    <Typography
+                      variant="body2"
+                      noWrap
+                      title={row.pickupAddress ?? undefined}
+                    >
+                      {row.pickupAddress || "Sin dirección registrada"}
+                    </Typography>
+                    {row.hasCoordinates === false && (
+                      <Typography
+                        variant="caption"
+                        color="warning.main"
+                        sx={{ display: "block", fontWeight: 500 }}
+                      >
+                        Sin coordenadas
+                      </Typography>
+                    )}
+                  </StyledTableCell>
+                )}
                 <StyledTableCell>
                   {row.scheduledDate
                     ? formatDateOnly(row.scheduledDate, "D [de] MMM YYYY")
@@ -403,6 +429,7 @@ export function AddOrdersToRouteModal({
     onToggleGroup: (ids: string[], selected: boolean) => void,
     dateHeader: string,
     emptyMessage: string,
+    showPickupAddress = false,
   ) => {
     if (loading) {
       return (
@@ -448,7 +475,13 @@ export function AddOrdersToRouteModal({
                 </Typography>
               </ZoneAccordionSummary>
               <AccordionDetails sx={{ p: 0 }}>
-                {renderItemRows(group.items, selectedIds, onToggle, dateHeader)}
+                {renderItemRows(
+                  group.items,
+                  selectedIds,
+                  onToggle,
+                  dateHeader,
+                  showPickupAddress,
+                )}
               </AccordionDetails>
             </ZoneAccordion>
           );
@@ -597,6 +630,7 @@ export function AddOrdersToRouteModal({
                   searchQuery
                     ? "No se encontraron recuperaciones"
                     : "No hay artículos pendientes de reasignación",
+                  true,
                 )
             }
           </>

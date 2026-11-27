@@ -7,7 +7,7 @@ import {
   Typography,
 } from "@mui/material";
 import { CircleCheck, X as CloseIcon } from "lucide-react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import {
   DialogContent,
   ModalHeader,
@@ -15,19 +15,32 @@ import {
   ModalDescription,
   CloseButton,
 } from "@/components/ModalForm/styles";
-import { FormTextField } from "@/components/Form";
-import {
-  deactivateClient,
-  getClientDeactivationReasons,
-} from "@/services/clients.service";
-import type { ClientDeactivationReason } from "@/types/clientes.types";
-import { getApiErrorMessage, unwrapOrThrow } from "@/lib/axios";
+import { deactivateClient } from "@/services/clients.service";
+import type { ClientDeactivationStatus } from "@/types/clientes.types";
+import { getApiErrorMessage } from "@/lib/axios";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import {
   FooterActions,
   ReasonCard,
   ReasonCheckIcon,
 } from "@/components/DiscountRequestModal/styles";
+
+const DEACTIVATION_OPTIONS: {
+  status: ClientDeactivationStatus;
+  title: string;
+  description: string;
+}[] = [
+  {
+    status: "cesado",
+    title: "Cesado",
+    description: "Adeudo incobrable.",
+  },
+  {
+    status: "cancelado",
+    title: "Cancelado",
+    description: "Solicitud directa del cliente.",
+  },
+];
 
 export interface DeactivateClientModalProps {
   open: boolean;
@@ -45,43 +58,22 @@ export function DeactivateClientModal({
   const showSuccess = useSnackbarStore((state) => state.showSuccess);
   const showError = useSnackbarStore((state) => state.showError);
 
-  const [selectedReasonId, setSelectedReasonId] = useState<number | null>(null);
-  const [customReason, setCustomReason] = useState("");
-
-  const reasonsQuery = useQuery({
-    queryKey: ["clients", "deactivation-reasons"],
-    enabled: open,
-    queryFn: async () => {
-      const result = await getClientDeactivationReasons();
-      return unwrapOrThrow(result);
-    },
-    staleTime: 6 * 60 * 60 * 1000,
-    gcTime: 12 * 60 * 60 * 1000,
-  });
-
-  const reasons = reasonsQuery.data ?? [];
-  const selectedReason = reasons.find((reason) => reason.id === selectedReasonId);
+  const [selectedStatus, setSelectedStatus] =
+    useState<ClientDeactivationStatus | null>(null);
 
   const resetForm = useCallback(() => {
-    setSelectedReasonId(null);
-    setCustomReason("");
+    setSelectedStatus(null);
   }, []);
 
-  const isOtherSelected = selectedReason?.allowsCustomText ?? false;
-  const trimmedCustomReason = customReason.trim();
-  const canSubmit =
-    selectedReasonId !== null &&
-    (!isOtherSelected || trimmedCustomReason.length > 0) &&
-    !reasonsQuery.isLoading;
+  const canSubmit = selectedStatus !== null;
 
   const mutation = useMutation({
     mutationFn: async () => {
-      if (selectedReasonId === null) {
+      if (selectedStatus === null) {
         throw new Error("Selecciona un motivo de baja.");
       }
       const result = await deactivateClient(clientId, {
-        reasonId: selectedReasonId,
-        notes: isOtherSelected ? trimmedCustomReason : undefined,
+        deactivationStatus: selectedStatus,
       });
       if (result.error) {
         throw new Error(result.error.message);
@@ -103,45 +95,30 @@ export function DeactivateClientModal({
     onClose();
   };
 
-  const renderReasonCard = (reason: ClientDeactivationReason) => {
-    const selected = selectedReasonId === reason.id;
+  const renderReasonCard = (option: (typeof DEACTIVATION_OPTIONS)[number]) => {
+    const selected = selectedStatus === option.status;
 
     return (
       <ReasonCard
-        key={reason.id}
+        key={option.status}
         selected={selected}
         role="button"
         tabIndex={0}
-        onClick={() => setSelectedReasonId(reason.id)}
+        onClick={() => setSelectedStatus(option.status)}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
-            setSelectedReasonId(reason.id);
+            setSelectedStatus(option.status);
           }
         }}
       >
-        <Stack spacing={reason.allowsCustomText ? 1.5 : 0.5} flex={1} minWidth={0}>
+        <Stack spacing={0.5} flex={1} minWidth={0}>
           <Typography variant="subtitle1" fontWeight={600}>
-            {reason.name}
+            {option.title}
           </Typography>
-          {reason.allowsCustomText ? (
-            <FormTextField
-              placeholder="Ingresa otro motivo"
-              value={customReason}
-              onChange={(event) => setCustomReason(event.target.value)}
-              onFocus={() => setSelectedReasonId(reason.id)}
-              onClick={(event) => event.stopPropagation()}
-              onKeyDown={(event) => event.stopPropagation()}
-              fullWidth
-              size="small"
-            />
-          ) : (
-            reason.description && (
-              <Typography variant="body2" color="text.secondary">
-                {reason.description}
-              </Typography>
-            )
-          )}
+          <Typography variant="body2" color="text.secondary">
+            {option.description}
+          </Typography>
         </Stack>
 
         {selected && (
@@ -192,17 +169,7 @@ export function DeactivateClientModal({
           spacing={1.5}
           sx={{ flex: 1, overflow: "auto", minHeight: 0, pb: 1, mt: 1.5 }}
         >
-          {reasonsQuery.isLoading ? (
-            <Typography variant="body2" color="text.secondary">
-              Cargando motivos...
-            </Typography>
-          ) : reasonsQuery.isError ? (
-            <Typography variant="body2" color="error">
-              {getApiErrorMessage(reasonsQuery.error)}
-            </Typography>
-          ) : (
-            reasons.map(renderReasonCard)
-          )}
+          {DEACTIVATION_OPTIONS.map(renderReasonCard)}
         </Stack>
 
         <FooterActions>

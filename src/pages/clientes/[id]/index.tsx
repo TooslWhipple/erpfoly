@@ -4,7 +4,6 @@ import { Skeleton, Typography, Button, Stack, Divider, Avatar, Box } from "@mui/
 import numeral from "numeral";
 import { FileText, Fingerprint, Plus } from "lucide-react";
 import { Breadcrumbs, CreditLimitBar, StatusChip, TabFilters } from "@/components";
-import type { StatusChipVariant } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import {
   ActivityTab,
@@ -42,23 +41,16 @@ import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { usePermissions } from "@/hooks/usePermissions";
 import { CUSTOMERS_DELETE } from "@/lib/permissions";
 import type { ClientStatus, ClientType } from "@/types/clientes.types";
+import {
+  CLIENT_STATUS_LABELS,
+  CLIENT_STATUS_VARIANTS,
+  isClientActive,
+} from "@/utils/clientStatus";
 import { ClientBiometricEnrollModal } from "@/components/ClientBiometricEnrollModal/ClientBiometricEnrollModal";
 
 function formatCurrency(value: number): string {
   return numeral(value).format("$0,0.00");
 }
-
-const STATUS_LABELS: Record<ClientStatus, string> = {
-  active: "Activo",
-  inactive: "Inactivo",
-  blocked: "Bloqueado",
-};
-
-const STATUS_VARIANTS: Record<ClientStatus, StatusChipVariant> = {
-  active: "success",
-  inactive: "default",
-  blocked: "error",
-};
 
 const CLIENT_TYPE_LABELS: Record<ClientType, string> = {
   CASH: "Contado",
@@ -346,11 +338,11 @@ export default function ClientDetailPage() {
   const creditBalance = header.creditBalance ?? 0;
   const hasCreditBalance = creditBalance > 0;
   const clientStatus = (header.status ?? "active") as ClientStatus;
-  const isClientActive = clientStatus === "active";
+  const clientIsActive = isClientActive(clientStatus);
   const canDeactivateClient = hasPermission(CUSTOMERS_DELETE);
 
   const handleAddPaymentClick = async () => {
-    if (!isClientActive) {
+    if (!clientIsActive) {
       return;
     }
 
@@ -427,7 +419,7 @@ export default function ClientDetailPage() {
     }
   };
 
-  const canEnrollBiometrics = header.biometricsPending && isClientActive;
+  const canEnrollBiometrics = header.biometricsPending && clientIsActive;
   const clientType: ClientType = isCreditClient ? "CREDIT" : "CASH";
 
   return (
@@ -462,8 +454,8 @@ export default function ClientDetailPage() {
               </Typography>
               <Stack direction="row" spacing={1.5} alignItems="center">
                 <StatusChip
-                  label={STATUS_LABELS[clientStatus]}
-                  variant={STATUS_VARIANTS[clientStatus]}
+                  label={CLIENT_STATUS_LABELS[clientStatus]}
+                  variant={CLIENT_STATUS_VARIANTS[clientStatus]}
                   size="small"
                 />
                 <StatusChip
@@ -510,7 +502,7 @@ export default function ClientDetailPage() {
             )}
             <ClientDetailActions
               showDeactivateAction={canDeactivateClient}
-              deactivateDisabled={!isClientActive}
+              deactivateDisabled={!clientIsActive}
               onDeactivateClick={() => setDeactivateModalOpen(true)}
               onGenerateStatement={() => setStatementModalOpen(true)}
             />
@@ -605,7 +597,7 @@ export default function ClientDetailPage() {
             variant="option"
             color="inherit"
             startIcon={<FileText size={16} />}
-            disabled={!isClientActive}
+            disabled={!clientIsActive}
             sx={{
               minWidth: {
                 xs: "100%",
@@ -619,7 +611,7 @@ export default function ClientDetailPage() {
           <Button
             variant="contained"
             color="primary"
-            disabled={validatingPayment || !isClientActive}
+            disabled={validatingPayment || !clientIsActive}
             sx={{
               minWidth: {
                 xs: "100%",

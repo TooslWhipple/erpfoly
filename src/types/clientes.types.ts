@@ -56,7 +56,9 @@ export interface ClientDetailHeader {
   biometricsPending: boolean;
 }
 
-export type ClientStatus = "active" | "inactive" | "blocked";
+export type ClientStatus = "active" | "blocked" | "cesado" | "cancelado";
+
+export type ClientDeactivationStatus = "cesado" | "cancelado";
 
 export type ClientType = "CASH" | "CREDIT";
 
@@ -69,8 +71,7 @@ export interface ClientDeactivationReason {
 }
 
 export interface DeactivateClientPayload {
-  reasonId: number;
-  notes?: string;
+  deactivationStatus: ClientDeactivationStatus;
 }
 
 export type ActivityType = "call" | "message" | "email" | "visit" | "note";

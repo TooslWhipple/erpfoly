@@ -997,7 +997,6 @@ export function SaleBuilder({
         sources: item.inventorySources,
         saleItemId: item.id,
         backorderedQuantity: item.backorderedQuantity,
-        isLiquidation: item.product.isLiquidation,
         isDiscontinued: item.product.isDiscontinued,
       })),
     );
@@ -2400,7 +2399,6 @@ export function SaleBuilder({
         quantity: totalQty,
         sources: productSources,
         backorderedQuantity,
-        isLiquidation: productDetail.isLiquidation,
         isDiscontinued: productDetail.isDiscontinued,
       };
       if (existing >= 0) {
@@ -2410,7 +2408,6 @@ export function SaleBuilder({
           quantity: totalQty,
           sources: productSources,
           backorderedQuantity,
-          isLiquidation: productDetail.isLiquidation,
           isDiscontinued: productDetail.isDiscontinued,
         };
         return updated;
@@ -3170,7 +3167,7 @@ export function SaleBuilder({
                         variant="body2"
                         fontWeight={700}
                         color={
-                          row.isDiscontinued || row.isLiquidation
+                          row.isDiscontinued
                             ? "error.main"
                             : "text.primary"
                         }

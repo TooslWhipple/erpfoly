@@ -386,7 +386,7 @@ export function PriceTab({
                                     </Stack>
                                 </Stack>
                             </LastCostCard>
-                            <LuquidationCard checked={formState.discontinued || formState.liquidation}>
+                            <LuquidationCard checked={formState.discontinued}>
                                 <Stack direction="row" alignItems="center" spacing={1}>
                                     <LiquidationSwitch
                                         checked={formState.discontinued}
@@ -566,7 +566,7 @@ export function PriceTab({
                 onClose={handleClosePromotionModal}
                 productId={productNumericId}
                 editingDraft={editingPromotionDraft}
-                isLiquidation={formState.discontinued || formState.liquidation}
+                isLiquidation={formState.discontinued}
                 onSave={handleSavePromotionDraft}
             />
         </>

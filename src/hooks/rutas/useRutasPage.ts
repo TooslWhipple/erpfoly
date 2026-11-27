@@ -258,6 +258,8 @@ export function useRutasPage() {
         scheduledDate: row.scheduled_date,
         destinationBranch: row.destination_branch,
         recoverySheetId: row.recovery_sheet_id ?? null,
+        pickupAddress: row.pickup_address ?? null,
+        hasCoordinates: row.has_coordinates,
       });
       return {
         suggested: data.suggested.map(mapRow),

@@ -65,7 +65,6 @@ export interface ProductSearchResult {
   name: string;
   imageUrl: string | null;
   finalPrice: number;
-  isLiquidation?: boolean;
   isDiscontinued?: boolean;
 }
 
@@ -93,7 +92,6 @@ export interface ProductDetail {
   finalPrice: number;
   inventorySources: InventorySource[];
   hasOtherBranches?: boolean;
-  isLiquidation?: boolean;
   isDiscontinued?: boolean;
 }
 
@@ -115,7 +113,6 @@ export interface CartItem {
    * the backend still tracks as uncovered. Shown as the backorder chip.
    */
   backorderedQuantity: number;
-  isLiquidation?: boolean;
   isDiscontinued?: boolean;
 }
 
@@ -136,7 +133,6 @@ export interface SaleDetailItem {
     code: string;
     name: string;
     imageUrl: string | null;
-    isLiquidation?: boolean;
     isDiscontinued?: boolean;
   };
 }

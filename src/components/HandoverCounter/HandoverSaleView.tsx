@@ -39,6 +39,8 @@ export interface HandoverSaleViewProps {
   disabled?: boolean;
   /** Solo lectura: sin escaneo ni captura de cantidades. */
   readOnly?: boolean;
+  /** FOLY-276: cambiar la ubicación de entrega de un artículo. */
+  onChangeLineBranch?: (line: HandoverLine) => void;
 }
 
 function lineBreakdown(line: HandoverLine): string[] {
@@ -55,6 +57,7 @@ export function HandoverSaleView({
   onCapturedChange,
   disabled = false,
   readOnly = false,
+  onChangeLineBranch,
 }: HandoverSaleViewProps) {
   const [manualCode, setManualCode] = useState("");
   const [feedback, setFeedback] = useState<ScanFeedback>(null);
@@ -193,6 +196,9 @@ export function HandoverSaleView({
           const highlighted =
             feedback?.kind === "success" && feedback.saleItemId === line.saleItemId;
           const notReady = line.ready === 0;
+          const elsewhere =
+            line.deliveryBranch !== null &&
+            line.deliveryBranch.id !== detail.deliveryBranch.id;
           return (
             <LineCard key={line.saleItemId} highlighted={highlighted} muted={notReady}>
               <Stack
@@ -218,9 +224,26 @@ export function HandoverSaleView({
                     {line.pendingSupply > 0 ? (
                       <Chip size="small" variant="outlined" label="Pendiente por surtir" />
                     ) : null}
+                    {elsewhere ? (
+                      <Chip
+                        size="small"
+                        color="info"
+                        variant="outlined"
+                        label={`Se entrega en ${line.deliveryBranch?.name}`}
+                      />
+                    ) : null}
+                    {onChangeLineBranch && line.delivered + line.released < line.quantity ? (
+                      <Button
+                        size="small"
+                        onClick={() => onChangeLineBranch(line)}
+                        disabled={disabled}
+                      >
+                        Cambiar ubicación
+                      </Button>
+                    ) : null}
                   </Stack>
                 </Box>
-                {line.ready > 0 && !readOnly ? (
+                {line.ready > 0 && !readOnly && !elsewhere ? (
                   <Stack direction="row" spacing={0.75} alignItems="center">
                     <NumberSpinner
                       value={quantity}

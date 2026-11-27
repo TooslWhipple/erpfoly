@@ -19,10 +19,18 @@ export async function getSellers(
   return get<GetSellersResponse>(buildListUrl(SELLERS_BASE, params));
 }
 
+/** Without `period` the API reports the current month. */
 export async function getSellerDetail(
-  sellerId: number
+  sellerId: number,
+  period?: { year: number; month: number }
 ): Promise<ApiResult<SellerDetail>> {
-  return get<SellerDetail>(`${SELLERS_BASE}/${sellerId}`);
+  const query = period
+    ? `?${new URLSearchParams({
+        year: String(period.year),
+        month: String(period.month),
+      })}`
+    : "";
+  return get<SellerDetail>(`${SELLERS_BASE}/${sellerId}${query}`);
 }
 
 export async function updateSellerBranch(

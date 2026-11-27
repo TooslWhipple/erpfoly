@@ -2,7 +2,6 @@ import { useCallback, useState } from "react";
 import { Box, CircularProgress, Stack, Typography } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { SideModal, StatusChip, TabFilters } from "@/components";
-import type { StatusChipVariant } from "@/components/StatusChip";
 import { ActivityTab } from "@/pages/clientes/components/ActivityTab";
 import {
   createClientCollectionActivity,
@@ -27,23 +26,15 @@ import type {
   SharedDelinquencyClientDetail,
 } from "@/types/delinquency-shared-list.types";
 import type { ClientStatus } from "@/types/clientes.types";
+import {
+  CLIENT_STATUS_LABELS,
+  CLIENT_STATUS_VARIANTS,
+} from "@/utils/clientStatus";
 import { SharedDelinquencyClientHeader, formatClientSinceLabel } from "./SharedDelinquencyClientHeader";
 import { NegotiationTab } from "./NegotiationTab";
 import { GeneralInformationTab } from "./GeneralInformationTab";
 import { ClientAddressTab } from "./ClientAddressTab";
 import { GuarantorReadOnlyTab } from "./GuarantorReadOnlyTab";
-
-const STATUS_LABELS: Record<ClientStatus, string> = {
-  active: "Activo",
-  inactive: "Inactivo",
-  blocked: "Bloqueado",
-};
-
-const STATUS_VARIANTS: Record<ClientStatus, StatusChipVariant> = {
-  active: "success",
-  inactive: "default",
-  blocked: "error",
-};
 
 export interface SharedDelinquencyClientModalProps {
   open: boolean;
@@ -93,7 +84,7 @@ export function SharedDelinquencyClientModal({
 
   const client = detailQuery.data;
   const clientId = client?.clientId ?? null;
-  const status = client?.status ?? "active";
+  const status = (client?.status ?? "active") as ClientStatus;
 
   const activitiesQuery = useQuery({
     queryKey: ["clients", "collection-activities", clientId],
@@ -220,7 +211,11 @@ export function SharedDelinquencyClientModal({
       headerActionsPosition="top"
       headerActions={
         client &&
-        <StatusChip label={STATUS_LABELS[status]} variant={STATUS_VARIANTS[status]} size="small" />
+        <StatusChip
+          label={CLIENT_STATUS_LABELS[status]}
+          variant={CLIENT_STATUS_VARIANTS[status]}
+          size="small"
+        />
       }
       header={
         client && <SharedDelinquencyClientHeader client={client} />

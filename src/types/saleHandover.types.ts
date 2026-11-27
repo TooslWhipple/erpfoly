@@ -69,7 +69,11 @@ export type HandoverBranch = {
 /** Sucursal que entrega físicamente la orden (donde está el inventario). */
 export type DeliveryBranch = { id: number; name: string };
 
-export type QueueReadiness = "READY" | "ANY";
+/** WAITING (FOLY-277): solo lo que espera surtido o traspaso. */
+export type QueueReadiness = "READY" | "ANY" | "WAITING";
+
+/** FOLY-277: más recientes, más antiguas o próximas a vencer. */
+export type QueueSort = "NEWEST" | "OLDEST" | "EXPIRING";
 
 /** Estatus de traspaso activo que expone el back (subconjunto de `OrderStatus`). */
 export type IncomingTransferStatus =
@@ -93,6 +97,8 @@ export type QueueRow = {
   /** Sucursal responsable (la que vendió). */
   saleBranchName: string;
   deliveryBranch: DeliveryBranch;
+  /** Fecha y hora de la venta (ISO). */
+  createdAt: string;
   /** Solo alcance de escritura; el permiso lo combina `canProcess`. */
   canEdit: boolean;
   clientName: string;
@@ -114,6 +120,8 @@ export type HandoverLine = {
   released: number;
   ready: number;
   pendingSupply: number;
+  /** FOLY-276: ubicación donde se entrega este artículo. */
+  deliveryBranch: DeliveryBranch | null;
 };
 
 /** Autorización de la venta aún vigente; permite rehidratar el respaldo al recargar. */
@@ -150,6 +158,11 @@ export type GetHandoverQueueParams = {
   branchId?: number;
   /** Por defecto `READY`; `ANY` incluye órdenes por surtir o en camino. */
   readiness?: QueueReadiness;
+  /** Por defecto `NEWEST`. */
+  sort?: QueueSort;
+  /** Fecha de la venta (YYYY-MM-DD, inclusivo). */
+  dateFrom?: string;
+  dateTo?: string;
   search?: string;
   page: number;
   limit: number;

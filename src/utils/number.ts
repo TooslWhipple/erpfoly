@@ -1,3 +1,12 @@
+const percentFormatter = new Intl.NumberFormat("es-MX", {
+  maximumFractionDigits: 2,
+});
+
+/** `2.35` → `"2.35%"`, `50` → `"50%"`: up to two decimals, no trailing zeros. */
+export function formatPercent(value: number): string {
+  return `${percentFormatter.format(value)}%`;
+}
+
 /** Round to 2 decimal places (currency cents). */
 export function roundToCents(value: number): number {
   return Math.round(value * 100) / 100;

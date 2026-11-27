@@ -54,7 +54,12 @@ export function Breadcrumbs({
                 const isClickable = !isLast && item.href;
 
                 return (
-                    <Stack key={index} direction="row" alignItems="center">
+                    <Stack
+                        key={index}
+                        direction="row"
+                        alignItems="center"
+                        sx={{ minWidth: 0, flexShrink: isLast ? 1 : 0 }}
+                    >
                         {index > 0 && <Separator>›</Separator>}
 
                         {isClickable ? (

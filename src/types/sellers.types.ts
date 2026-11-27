@@ -42,6 +42,23 @@ export interface SellerSaleHistoryRow {
   amount: number;
 }
 
+/** Month the seller dashboard reports on (the current month by default). */
+/** Running totals up to a day of the selected month. */
+export interface SellerDailyProgressPoint {
+  day: number;
+  sales: number | null;
+  approvedCredits: number | null;
+  newCreditsAmount: number | null;
+}
+
+export interface SellerDashboardPeriod {
+  year: number;
+  month: number;
+  /** Month name in Spanish, e.g. "Septiembre". */
+  label: string;
+  isCurrent: boolean;
+}
+
 export interface SellerDetail {
   id: number;
   fullName: string;
@@ -49,6 +66,10 @@ export interface SellerDetail {
   branchId: number | null;
   branchName: string;
   status: SellerStatus;
+  /** Seller creation date; the first month the dashboard can show. */
+  sellerSince: string;
+  period: SellerDashboardPeriod;
+  /** The currentMonth* fields hold the selected `period`. */
   currentMonthLabel: string;
   currentMonthSales: number;
   currentMonthGoal: number;
@@ -61,7 +82,8 @@ export interface SellerDetail {
   newCreditsGoalProgressPercent: number;
   commissionRatePercent: number;
   commissionAmount: number;
-  progressSeries: { label: string; actual: number; goal: number }[];
+  /** One point per day of `period`; `null` values are days still to come. */
+  dailyProgress: SellerDailyProgressPoint[];
   monthlyChart: SellerMonthlyChartPoint[];
   monthlyBreakdown: SellerMonthlyBreakdownRow[];
   salesHistory: SellerSaleHistoryRow[];

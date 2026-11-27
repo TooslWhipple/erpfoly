@@ -29,7 +29,7 @@ import {
   toDocumentFileReferencePayload,
 } from "@/utils/credit-application-documents";
 
-export type ClientStatus = "active" | "inactive" | "blocked";
+export type ClientStatus = "active" | "blocked" | "cesado" | "cancelado";
 
 export type ClientCreditStatus = "ACTIVE" | "MOROSO";
 

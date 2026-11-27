@@ -1,7 +1,9 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/router";
 import {
   Alert,
+  Box,
   Button,
   CircularProgress,
   Divider,
@@ -25,6 +27,7 @@ import {
   InlineBranchSelect,
   ConfirmModal,
   ItemNameHighlight,
+  SellerPeriodSelect,
 } from "@/components";
 import {
   SalesMonthGoalCard,
@@ -37,23 +40,32 @@ import type { Column } from "@/components/TableCrud";
 import { MonthlySalesGoalsModal } from "@/components/Sellers";
 import { useAsyncEffect } from "@/hooks/useAsyncEffect";
 import {
-  getSellerDetail,
-  updateSellerBranch,
-} from "@/services/sellers.service";
+  SELLER_DETAIL_QUERY_KEY,
+  useSellerDetail,
+} from "@/hooks/useSellerDetail";
+import { updateSellerBranch } from "@/services/sellers.service";
 import {
   getBranchesCatalog,
   type BranchCatalogItem,
 } from "@/services/branches.service";
 import type {
-  SellerDetail,
   SellerSaleHistoryRow,
   SellerSaleType,
 } from "@/types/sellers.types";
+import {
+  buildSellerPeriodOptions,
+  periodCardLabel,
+  toPeriodValue,
+  type SellerPeriodOption,
+  type SellerPeriodValue,
+  splitDailyProgress,
+} from "@/utils/sellerPeriods";
 import {
   ChartCard,
 } from "@/styles/catalogos/vendedores.styles";
 import { theme } from "@/styles/theme";
 import { formatDate } from "@/utils/date";
+import { formatPercent } from "@/utils/number";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 const CHART_PRIMARY = "#2663EB";
@@ -125,48 +137,47 @@ export default function VendedorDetailPage() {
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
   const showError = useSnackbarStore((s) => s.showError);
 
-  const [detail, setDetail] = useState<SellerDetail | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  // Period chosen for one seller; another seller starts on the current month.
+  const [periodSelection, setPeriodSelection] = useState<{
+    sellerId: number | null;
+    period: SellerPeriodValue | null;
+  }>({ sellerId: null, period: null });
+  const selectedPeriod =
+    periodSelection.sellerId === validId ? periodSelection.period : null;
+
+  const detailQuery = useSellerDetail(validId, selectedPeriod);
+  const detail = detailQuery.data ?? null;
+  const error = detailQuery.error?.message ?? null;
+
   const [modalOpen, setModalOpen] = useState(false);
   const [typeFilterIds, setTypeFilterIds] = useState<(string | number)[]>([]);
   const [branches, setBranches] = useState<BranchCatalogItem[]>([]);
   const [branchSaving, setBranchSaving] = useState(false);
   const [branchConfirmOpen, setBranchConfirmOpen] = useState(false);
   const [pendingBranchId, setPendingBranchId] = useState<number | null>(null);
-  const [reloadToken, setReloadToken] = useState(0);
 
   const reloadDetail = useCallback(() => {
-    setReloadToken((token) => token + 1);
-  }, []);
+    void queryClient.invalidateQueries({
+      queryKey: [...SELLER_DETAIL_QUERY_KEY, validId],
+    });
+  }, [queryClient, validId]);
 
-  useAsyncEffect(
-    async (isCancelled) => {
-      await Promise.resolve();
-      if (isCancelled()) return;
-      if (validId === null) {
-        setDetail(null);
-        setError(null);
-        setLoading(false);
-        return;
-      }
-      setDetail(null);
-      setLoading(true);
-      setError(null);
-      const result = await getSellerDetail(validId);
-      if (isCancelled()) return;
-      if (result.error) {
-        setDetail(null);
-        setError(result.error.message);
-      } else if (result.data) {
-        setDetail(result.data);
-      }
-      if (!isCancelled()) {
-        setLoading(false);
-      }
-    },
-    [validId, reloadToken],
+  const periodOptions = useMemo(
+    () => buildSellerPeriodOptions(detail?.sellerSince),
+    [detail?.sellerSince],
   );
+  const selectedPeriodValue = selectedPeriod
+    ? toPeriodValue(selectedPeriod)
+    : (periodOptions[0]?.value ?? "");
+
+  const handlePeriodChange = (option: SellerPeriodOption) => {
+    const isCurrent = option.value === periodOptions[0]?.value;
+    setPeriodSelection({
+      sellerId: validId,
+      period: isCurrent ? null : { year: option.year, month: option.month },
+    });
+  };
 
   useAsyncEffect(
     async (isCancelled) => {
@@ -254,7 +265,12 @@ export default function VendedorDetailPage() {
     );
   }
 
-  const showLoading = loading || (detail == null && !error);
+  const showLoading = detailQuery.isPending && validId !== null;
+
+  // Without daily points (an API that predates them) the cards fall back to their synthetic curve.
+  const dailySeries = detail?.dailyProgress?.length
+    ? splitDailyProgress(detail.dailyProgress)
+    : undefined;
 
   const donutData =
     detail != null
@@ -297,25 +313,24 @@ export default function VendedorDetailPage() {
   return (
     <Stack spacing={3}>
       <Stack
-        direction={{
-          xs: "column",
-          md: "row",
-        }}
-        justifyContent={{
-          xs: "flex-start",
-          md: "space-between",
-        }}
+        direction="row"
+        justifyContent="space-between"
         alignItems="center"
-        spacing={2}
+        spacing={1}
+        sx={{ minWidth: 0 }}
       >
-        <Breadcrumbs items={breadcrumbItems} />
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Breadcrumbs items={breadcrumbItems} />
+        </Box>
 
         {detail != null && (
-          <StatusChip
-            label={detail.status === "ACTIVE" ? "Activo" : "Inactivo"}
-            variant={detail.status === "ACTIVE" ? "success" : "default"}
-            size="small"
-          />
+          <Box sx={{ flexShrink: 0 }}>
+            <StatusChip
+              label={detail.status === "ACTIVE" ? "Activo" : "Inactivo"}
+              variant={detail.status === "ACTIVE" ? "success" : "default"}
+              size="small"
+            />
+          </Box>
         )}
       </Stack>
 
@@ -336,166 +351,194 @@ export default function VendedorDetailPage() {
             />
           </Stack>
           <Divider />
-          <Typography variant="subtitle1">Dashboard de ventas</Typography>
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            alignItems={{ xs: "stretch", sm: "center" }}
+            justifyContent="space-between"
+            spacing={2}
+          >
+            <Typography variant="subtitle1">Dashboard de ventas</Typography>
+            <SellerPeriodSelect
+              options={periodOptions}
+              value={selectedPeriodValue}
+              onChange={handlePeriodChange}
+            />
+          </Stack>
 
-          <Grid container spacing={2} alignItems="stretch">
-            <Grid
-              size={{
-                xs: 12,
-                md: 6,
-              }}
-            >
-              <SalesMonthGoalCard
-                thisMonth={detail.currentMonthSales}
-                goal={detail.currentMonthGoal}
-              />
-            </Grid>
-            <Grid
-              size={{
-                xs: 12,
-                md: 6,
-              }}
-            >
-              <ChartCard>
-                <Grid
-                  container
-                  width="100%"
-                  height="100%"
-                  spacing={2}
-                  alignItems="center"
-                >
+          <Stack
+            spacing={3}
+            sx={{
+              opacity: detailQuery.isPlaceholderData ? 0.6 : 1,
+              transition: "opacity 150ms",
+            }}
+            aria-busy={detailQuery.isPlaceholderData}
+          >
+            <Grid container spacing={2} alignItems="stretch">
+              <Grid
+                size={{
+                  xs: 12,
+                  md: 6,
+                }}
+              >
+                <SalesMonthGoalCard
+                  thisMonth={detail.currentMonthSales}
+                  goal={detail.currentMonthGoal}
+                  periodLabel={periodCardLabel(detail.period)}
+                  series={dailySeries?.sales}
+                />
+              </Grid>
+              <Grid
+                size={{
+                  xs: 12,
+                  md: 6,
+                }}
+              >
+                <ChartCard>
                   <Grid
-                    size={{
-                      xs: 12,
-                      md: 6,
-                    }}
+                    container
+                    width="100%"
+                    height="100%"
+                    spacing={2}
+                    alignItems="center"
                   >
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <div
-                        style={{
-                          width: "88px",
-                          height: "88px",
-                        }}
-                      >
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={donutData}
-                              dataKey="value"
-                              startAngle={90}
-                              endAngle={-270}
-                              stroke="none"
-                            >
-                              <Cell fill={CHART_PRIMARY} />
-                              <Cell fill={theme.palette.app.chip.background} />
-                            </Pie>
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
+                    <Grid
+                      size={{
+                        xs: 12,
+                        md: 6,
+                      }}
+                    >
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <div
+                          style={{
+                            width: "88px",
+                            height: "88px",
+                          }}
+                        >
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={donutData}
+                                dataKey="value"
+                                startAngle={90}
+                                endAngle={-270}
+                                stroke="none"
+                              >
+                                <Cell fill={CHART_PRIMARY} />
+                                <Cell fill={theme.palette.app.chip.background} />
+                              </Pie>
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                        <Stack spacing={0.5}>
+                          <ArrowUpNarrowWide
+                            strokeWidth={2}
+                            size={16}
+                            color={theme.palette.text.secondary}
+                          />
+                          <Typography variant="h4">
+                            {formatPercent(detail.goalProgressPercent)}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Meta alcanzada
+                          </Typography>
+                        </Stack>
+                      </Stack>
+                    </Grid>
+                    <Grid
+                      size={{
+                        xs: 12,
+                        md: 6,
+                      }}
+                    >
                       <Stack spacing={0.5}>
-                        <ArrowUpNarrowWide
+                        <BadgeDollarSign
                           strokeWidth={2}
                           size={16}
                           color={theme.palette.text.secondary}
                         />
                         <Typography variant="h4">
-                          {detail.goalProgressPercent}%
+                          {numeral(detail.commissionAmount).format("$0,0.00")}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          Meta alcanzada
+                          Comisión ({detail.commissionRatePercent}%)
                         </Typography>
                       </Stack>
-                    </Stack>
+                    </Grid>
                   </Grid>
-                  <Grid
-                    size={{
-                      xs: 12,
-                      md: 6,
-                    }}
-                  >
-                    <Stack spacing={0.5}>
-                      <BadgeDollarSign
-                        strokeWidth={2}
-                        size={16}
-                        color={theme.palette.text.secondary}
-                      />
-                      <Typography variant="h4">
-                        {numeral(detail.commissionAmount).format("$0,0.00")}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Comisión ({detail.commissionRatePercent}%)
-                      </Typography>
-                    </Stack>
-                  </Grid>
-                </Grid>
-              </ChartCard>
+                </ChartCard>
+              </Grid>
             </Grid>
-          </Grid>
 
-          <Grid container spacing={2} alignItems="stretch">
-            <Grid
-              size={{
-                xs: 12,
-                md: 6,
-              }}
-            >
-              <CreditsMonthGoalCard
-                thisMonth={detail.currentMonthApprovedCredits}
-                goal={detail.currentMonthCreditGoal}
-              />
-            </Grid>
-            <Grid
-              size={{
-                xs: 12,
-                md: 6,
-              }}
-            >
-              <NewCreditsMonthGoalCard
-                thisMonth={detail.currentMonthApprovedNewCreditsAmount}
-                goal={detail.currentMonthNewCreditsGoal}
-              />
-            </Grid>
-          </Grid>
-
-          <MonthlySalesComposedChartCard
-            data={monthlyComposedData}
-            title="Ventas por mes"
-            headerEnd={
-              <Button
-                variant="text"
-                color="primary"
-                size="small"
-                startIcon={<LayoutList size={16} />}
-                onClick={() => setModalOpen(true)}
+            <Grid container spacing={2} alignItems="stretch">
+              <Grid
+                size={{
+                  xs: 12,
+                  md: 6,
+                }}
               >
-                Ver detalles
-              </Button>
-            }
-          />
+                <CreditsMonthGoalCard
+                  thisMonth={detail.currentMonthApprovedCredits}
+                  goal={detail.currentMonthCreditGoal}
+                  series={dailySeries?.approvedCredits}
+                />
+              </Grid>
+              <Grid
+                size={{
+                  xs: 12,
+                  md: 6,
+                }}
+              >
+                <NewCreditsMonthGoalCard
+                  thisMonth={detail.currentMonthApprovedNewCreditsAmount}
+                  goal={detail.currentMonthNewCreditsGoal}
+                  series={dailySeries?.newCreditsAmount}
+                />
+              </Grid>
+            </Grid>
 
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-            spacing={2}
-            flexWrap="nowrap"
-          >
-            <Typography variant="h6">Historial de ventas</Typography>
-            <OptionFilterButton
-              label="Tipo"
-              title="Tipo de venta"
-              options={SALE_TYPE_OPTIONS}
-              selectedIds={typeFilterIds}
-              onChange={setTypeFilterIds}
-              icon={<ScanSearch size={16} />}
+            <MonthlySalesComposedChartCard
+              data={monthlyComposedData}
+              title={`Ventas por mes ${detail.period.year}`}
+              headerEnd={
+                <Button
+                  variant="text"
+                  color="primary"
+                  size="small"
+                  startIcon={<LayoutList size={16} />}
+                  onClick={() => setModalOpen(true)}
+                >
+                  Ver detalles
+                </Button>
+              }
+            />
+
+            <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+              spacing={2}
+              useFlexGap
+              flexWrap="wrap"
+            >
+              <Typography variant="h6">
+                Historial de ventas · {detail.period.label} {detail.period.year}
+              </Typography>
+              <OptionFilterButton
+                label="Tipo"
+                title="Tipo de venta"
+                options={SALE_TYPE_OPTIONS}
+                selectedIds={typeFilterIds}
+                onChange={setTypeFilterIds}
+                icon={<ScanSearch size={16} />}
+              />
+            </Stack>
+            <TableCrud
+              columns={historyColumns}
+              rows={filteredHistory}
+              rowKey="id"
+              emptyMessage={`No hay ventas registradas en ${detail.period.label.toLowerCase()} ${detail.period.year}`}
             />
           </Stack>
-          <TableCrud
-            columns={historyColumns}
-            rows={filteredHistory}
-            rowKey="id"
-            emptyMessage="No hay ventas registradas"
-          />
 
           <MonthlySalesGoalsModal
             open={modalOpen}

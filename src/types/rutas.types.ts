@@ -78,6 +78,8 @@ export interface SuggestedItemToAdd {
   scheduledDate: string;
   destinationBranch: string | null;
   recoverySheetId?: number | null;
+  pickupAddress?: string | null;
+  hasCoordinates?: boolean;
 }
 
 /** Item eligible to be added to a route (general list, per-item) */
@@ -96,6 +98,8 @@ export interface OrderToAdd {
   scheduledDate: string;
   destinationBranch: string | null;
   recoverySheetId?: number | null;
+  pickupAddress?: string | null;
+  hasCoordinates?: boolean;
 }
 
 export interface AvailableOrdersResponse {

@@ -66,6 +66,8 @@ export interface SuggestedItemToAddApi {
   scheduled_date: string;
   destination_branch: string | null;
   recovery_sheet_id?: number | null;
+  pickup_address?: string | null;
+  has_coordinates?: boolean;
 }
 
 export interface OrderToAddApi {
@@ -83,6 +85,8 @@ export interface OrderToAddApi {
   scheduled_date: string;
   destination_branch: string | null;
   recovery_sheet_id?: number | null;
+  pickup_address?: string | null;
+  has_coordinates?: boolean;
 }
 
 export interface AvailableOrdersApi {

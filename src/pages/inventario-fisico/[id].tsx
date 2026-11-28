@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import {
+  Chip,
   CircularProgress,
   Divider,
   Stack,
@@ -58,7 +59,16 @@ export default function InventarioFisicoDetailPage() {
     () => [
       { label: "Inventarios", href: "/inventario-fisico" },
       { label: data?.branch.name ?? "Sucursal" },
-      { label: data ? `#${data.id}` : "Detalle" },
+      {
+        label:
+          data?.recordType === "unified_master"
+            ? `Maestro #${data.id}`
+            : data?.zoneName
+              ? data.zoneName
+              : data
+                ? `#${data.id}`
+                : "Detalle",
+      },
     ],
     [data],
   );
@@ -99,13 +109,26 @@ export default function InventarioFisicoDetailPage() {
     );
   }
 
+  const title =
+    data.recordType === "unified_master"
+      ? `Inventario unificado #${data.id}`
+      : `Inventario #${data.id}${data.zoneName ? ` · ${data.zoneName}` : ""}`;
+
   return (
     <Stack spacing={3}>
       <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
 
-      <Typography variant="h5" fontWeight={700}>
-        Inventario #{data.id}
-      </Typography>
+      <Stack direction="row" spacing={1} alignItems="center">
+        <Typography variant="h5" fontWeight={700}>
+          {title}
+        </Typography>
+        {data.status === "unified" ? (
+          <Chip size="small" label="Solo lectura" color="warning" />
+        ) : null}
+        {data.recordType === "unified_master" ? (
+          <Chip size="small" label="Auditoría" color="success" />
+        ) : null}
+      </Stack>
       <Divider />
 
       <TabFilters
@@ -123,6 +146,8 @@ export default function InventarioFisicoDetailPage() {
           capturedAt={data.capturedAt}
           branchName={data.branch.name}
           captureMethod={data.captureMethod}
+          zoneName={data.zoneName}
+          sourceSessions={data.sourceSessions}
         />
       )}
     </Stack>

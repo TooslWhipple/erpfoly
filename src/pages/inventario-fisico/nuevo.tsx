@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import {
   Button,
@@ -30,6 +30,8 @@ export default function NuevoInventarioFisicoPage() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const sucursalIdRaw = router.query.sucursalId;
+  const sessionIdRaw = router.query.sessionId;
+
   const branchId = useMemo(() => {
     const value = Array.isArray(sucursalIdRaw)
       ? sucursalIdRaw[0]
@@ -38,8 +40,21 @@ export default function NuevoInventarioFisicoPage() {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   }, [sucursalIdRaw]);
 
+  const sessionId = useMemo(() => {
+    const value = Array.isArray(sessionIdRaw)
+      ? sessionIdRaw[0]
+      : sessionIdRaw;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }, [sessionIdRaw]);
+
   const {
     branch,
+    zoneName,
+    sessionLocked,
+    syncStatus,
+    isFinishing,
+    finishScan,
     visibleItems,
     reviewedItems,
     catalogTotal,
@@ -53,27 +68,39 @@ export default function NuevoInventarioFisicoPage() {
     updateCountedQuantity,
     handleCodeScanned,
     removeLastScanned,
-  } = usePhysicalInventoryScan(branchId);
+  } = usePhysicalInventoryScan(branchId, sessionId);
+
+  useEffect(() => {
+    if (!sessionLocked || !sessionId) return;
+    void router.replace(`/inventario-fisico/${sessionId}`);
+  }, [router, sessionId, sessionLocked]);
 
   const breadcrumbs: BreadcrumbItem[] = useMemo(
     () => [
       { label: "Inventarios", href: "/inventario-fisico" },
       { label: branch?.name ?? "Sucursal" },
-      { label: "Nuevo" },
+      { label: zoneName ?? "Captura" },
     ],
-    [branch?.name],
+    [branch?.name, zoneName],
   );
 
   const handleBack = () => {
     void router.push("/inventario-fisico");
   };
 
-  const handleFinish = () => {
-    if (!branchId || !branch || reviewedItems.length === 0) return;
+  const handleFinish = async () => {
+    if (!branchId || !branch || !sessionId || reviewedItems.length === 0) {
+      return;
+    }
+
+    const synced = await finishScan();
+    if (!synced) return;
 
     const draft: PhysicalInventoryScanDraft = {
+      sessionId,
       branchId,
       branchName: branch.name,
+      zoneName: zoneName ?? "Captura",
       captureMethod: "device_camera",
       capturedAt: new Date().toISOString(),
       responsibleUser: user?.name ?? "Usuario",
@@ -83,6 +110,9 @@ export default function NuevoInventarioFisicoPage() {
     void router.push("/inventario-fisico/nuevo/confirmar");
   };
 
+  const finishDisabled =
+    isLoading || isFinishing || reviewedItems.length === 0;
+
   if (!router.isReady) {
     return (
       <Stack alignItems="center" justifyContent="center" minHeight={320}>
@@ -91,7 +121,7 @@ export default function NuevoInventarioFisicoPage() {
     );
   }
 
-  if (!branchId) {
+  if (!branchId || !sessionId) {
     return (
       <Stack spacing={2}>
         <Breadcrumbs
@@ -103,11 +133,20 @@ export default function NuevoInventarioFisicoPage() {
           onBack={handleBack}
         />
         <Typography color="text.secondary">
-          Debes seleccionar una sucursal para iniciar el inventario físico.
+          Debes iniciar una sesión de inventario desde el listado (sucursal y
+          zona).
         </Typography>
         <Button variant="contained" onClick={handleBack}>
           Volver al listado
         </Button>
+      </Stack>
+    );
+  }
+
+  if (sessionLocked) {
+    return (
+      <Stack alignItems="center" justifyContent="center" minHeight={320}>
+        <CircularProgress />
       </Stack>
     );
   }
@@ -118,25 +157,39 @@ export default function NuevoInventarioFisicoPage() {
         direction={{ xs: "column", sm: "row" }}
         justifyContent="space-between"
         alignItems={{ xs: "stretch", sm: "center" }}
-        spacing={2}>
+        spacing={2}
+      >
         <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
         <Button
           variant="contained"
           color="primary"
-          onClick={handleFinish}
-          disabled={isLoading || reviewedItems.length === 0}>
-          Finalizar escaneo
+          onClick={() => void handleFinish()}
+          disabled={finishDisabled}
+          startIcon={
+            isFinishing ? (
+              <CircularProgress size={18} color="inherit" />
+            ) : undefined
+          }
+        >
+          {isFinishing ? "Guardando…" : "Finalizar escaneo"}
         </Button>
       </Stack>
 
-      <Typography variant="h5" fontWeight={700}>Nuevo inventario</Typography>
+      <Typography variant="h5" fontWeight={700}>
+        {branch?.name ?? "Sucursal"}
+        {zoneName ? ` · ${zoneName}` : ""}
+      </Typography>
       <Divider />
 
       <Stack
         direction={{ xs: "column", lg: "row" }}
         spacing={2}
-        alignItems="stretch">
-        <Stack spacing={2} sx={{ width: { xs: "100%", lg: 360 }, flexShrink: 0 }}>
+        alignItems="stretch"
+      >
+        <Stack
+          spacing={2}
+          sx={{ width: { xs: "100%", lg: 360 }, flexShrink: 0 }}
+        >
           <Card>
             <PhysicalInventoryScanner onCodeScanned={handleCodeScanned} />
           </Card>
@@ -153,9 +206,12 @@ export default function NuevoInventarioFisicoPage() {
             direction={{ xs: "column", sm: "row" }}
             justifyContent="space-between"
             alignItems={{ xs: "stretch", sm: "center" }}
-            spacing={2}>
+            spacing={2}
+          >
             <Stack spacing={0.25}>
-              <Typography variant="h6" fontWeight={700}>Artículos a verificar</Typography>
+              <Typography variant="h6" fontWeight={700}>
+                Artículos a verificar
+              </Typography>
               {!isLoading && catalogTotal > 0 && (
                 <Typography variant="caption" color="text.secondary">
                   {visibleItems.length} de {catalogTotal} cargados ·{" "}

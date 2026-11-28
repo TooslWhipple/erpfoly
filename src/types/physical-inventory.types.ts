@@ -2,10 +2,21 @@ export type PhysicalInventoryCaptureMethod = "device_camera";
 
 export type HasVarianceFilter = "all" | "with" | "without";
 
+export type PhysicalInventoryRecordType = "zone_session" | "unified_master";
+
+export type PhysicalInventoryStatus =
+  | "in_progress"
+  | "unified"
+  | "completed";
+
 export interface PhysicalInventoryListItem {
   id: number;
   date: string;
   branch: { id: number; name: string };
+  zoneName: string | null;
+  status: PhysicalInventoryStatus;
+  recordType: PhysicalInventoryRecordType;
+  unifiable?: boolean;
   totalProducts: number;
   totalItems: number;
   missingUnits: number;
@@ -26,9 +37,22 @@ export interface PhysicalInventoryItem {
   isSurplus: boolean;
 }
 
+export interface PhysicalInventorySourceSession {
+  id: number;
+  zoneName: string | null;
+  responsibleUser: string;
+  totalProducts: number;
+  totalItems: number;
+}
+
 export interface PhysicalInventoryDetail {
   id: number;
   branch: { id: number; name: string };
+  zoneName: string | null;
+  status: PhysicalInventoryStatus;
+  recordType: PhysicalInventoryRecordType;
+  unifiable?: boolean;
+  unifiedMasterId?: number | null;
   capturedAt: string;
   captureMethod: PhysicalInventoryCaptureMethod;
   totalProducts: number;
@@ -37,6 +61,7 @@ export interface PhysicalInventoryDetail {
   surplusUnits: number;
   responsibleUser: string;
   responsibleUserId: number | null;
+  sourceSessions?: PhysicalInventorySourceSession[];
   items: PhysicalInventoryItem[];
 }
 
@@ -78,6 +103,7 @@ export interface CreatePhysicalInventoryPayload {
   branchId: number;
   captureMethod: PhysicalInventoryCaptureMethod;
   capturedAt: string;
+  zoneName?: string;
   items: Array<{
     productId: number;
     systemQuantity: number;
@@ -87,9 +113,45 @@ export interface CreatePhysicalInventoryPayload {
   }>;
 }
 
+export interface StartPhysicalInventorySessionPayload {
+  branchId: number;
+  zoneName: string;
+  captureMethod?: PhysicalInventoryCaptureMethod;
+}
+
+export interface StartPhysicalInventorySessionResponse {
+  id: number;
+  branch: { id: number; name: string };
+  zoneName: string | null;
+  status: PhysicalInventoryStatus;
+  recordType: PhysicalInventoryRecordType;
+  captureMethod: PhysicalInventoryCaptureMethod;
+  capturedAt: string;
+  responsibleUser: string;
+}
+
+export interface SyncPhysicalInventoryItemsPayload {
+  items: Array<{
+    productId: number;
+    systemQuantity: number;
+    countedQuantity: number;
+    wasScanned: boolean;
+    isSurplus: boolean;
+  }>;
+  /** Al confirmar: deja solo los ítems enviados */
+  replaceAll?: boolean;
+}
+
+export interface UnifyPhysicalInventoriesPayload {
+  branchId: number;
+  sessionIds: number[];
+}
+
 export interface PhysicalInventoryScanDraft {
+  sessionId: number;
   branchId: number;
   branchName: string;
+  zoneName: string;
   captureMethod: PhysicalInventoryCaptureMethod;
   capturedAt: string;
   responsibleUser: string;
@@ -111,6 +173,15 @@ export const PHYSICAL_INVENTORY_CAPTURE_METHOD_LABELS: Record<
   string
 > = {
   device_camera: "Cámara del dispositivo",
+};
+
+export const PHYSICAL_INVENTORY_STATUS_LABELS: Record<
+  PhysicalInventoryStatus,
+  string
+> = {
+  in_progress: "En proceso",
+  unified: "Concluido unificado",
+  completed: "Inventario unificado",
 };
 
 export const PHYSICAL_INVENTORY_DRAFT_KEY = "physicalInventoryDraft";

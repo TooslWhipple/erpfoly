@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import {
   getPhysicalInventoryBranchProductByCode,
   getPhysicalInventoryBranchProducts,
+  getPhysicalInventoryDetail,
+  syncPhysicalInventoryItems,
 } from "@/services/physical-inventory.service";
 import {
   getProductById,
@@ -11,14 +13,18 @@ import {
 import { normalizeScannedProductCode } from "@/utils/productCode";
 import type {
   PhysicalInventoryBranchProduct,
+  PhysicalInventoryDetail,
   PhysicalInventoryItem,
   PhysicalInventoryLastScannedProduct,
+  PhysicalInventoryStatus,
 } from "@/types/physical-inventory.types";
 import {
   PHYSICAL_INVENTORY_PAGE_SIZE,
   PHYSICAL_INVENTORY_UNREVIEWED,
 } from "@/types/physical-inventory.types";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+
+const AUTOSAVE_DEBOUNCE_MS = 1500;
 
 function useDebouncedValue<T>(value: T, delayMs: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -78,7 +84,10 @@ function matchesSearch(
   );
 }
 
-export function usePhysicalInventoryScan(branchId: number | null) {
+export function usePhysicalInventoryScan(
+  branchId: number | null,
+  sessionId: number | null = null,
+) {
   const showError = useSnackbarStore((state) => state.showError);
   const showSuccess = useSnackbarStore((state) => state.showSuccess);
   const [captures, setCaptures] = useState<
@@ -89,7 +98,177 @@ export function usePhysicalInventoryScan(branchId: number | null) {
     useState<PhysicalInventoryLastScannedProduct | null>(null);
   const [search, setSearch] = useState("");
   const [scanningBusy, setScanningBusy] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
+  const [sessionHydrated, setSessionHydrated] = useState(!sessionId);
+  const dirtyIdsRef = useRef<Set<number>>(new Set());
+  const syncInFlightRef = useRef(false);
+  const finishingRef = useRef(false);
+  const [isFinishing, setIsFinishing] = useState(false);
+  const capturesRef = useRef(captures);
+  capturesRef.current = captures;
   const debouncedSearch = useDebouncedValue(search.trim(), 300);
+
+  const sessionQuery = useQuery({
+    queryKey: ["physical-inventory-session", sessionId],
+    queryFn: async () => {
+      if (!sessionId) return null;
+      const result = await getPhysicalInventoryDetail(sessionId);
+      if (result.error) throw new Error(result.error.message);
+      return result.data;
+    },
+    enabled: Boolean(sessionId),
+    staleTime: Infinity,
+  });
+
+  useEffect(() => {
+    if (!sessionQuery.data || sessionHydrated) return;
+    const detail = sessionQuery.data as PhysicalInventoryDetail;
+    const nextCaptures: Record<number, PhysicalInventoryItem> = {};
+    const nextPinned: number[] = [];
+    for (const item of detail.items) {
+      if (item.countedQuantity < 0 && !item.wasScanned) continue;
+      nextCaptures[item.productId] = {
+        productId: item.productId,
+        code: item.code,
+        name: item.name,
+        categoryPath: item.categoryPath ?? "",
+        systemQuantity: item.systemQuantity,
+        countedQuantity: item.countedQuantity,
+        wasScanned: item.wasScanned,
+        isSurplus: item.isSurplus,
+      };
+      if (item.countedQuantity >= 0 || item.wasScanned) {
+        nextPinned.push(item.productId);
+      }
+    }
+    setCaptures(nextCaptures);
+    setPinnedIds(nextPinned);
+    setSessionHydrated(true);
+  }, [sessionHydrated, sessionQuery.data]);
+
+  useEffect(() => {
+    if (sessionQuery.isError) {
+      showError(
+        sessionQuery.error instanceof Error
+          ? sessionQuery.error.message
+          : "No se pudo cargar la sesión de inventario",
+      );
+    }
+  }, [sessionQuery.error, sessionQuery.isError, showError]);
+
+  const waitForSyncIdle = useCallback(async () => {
+    while (syncInFlightRef.current) {
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, 50);
+      });
+    }
+  }, []);
+
+  const buildSyncPayload = useCallback(
+    (items: PhysicalInventoryItem[]) =>
+      items.map((item) => ({
+        productId: item.productId,
+        systemQuantity: item.systemQuantity,
+        countedQuantity: item.countedQuantity,
+        wasScanned: item.wasScanned,
+        isSurplus: item.isSurplus,
+      })),
+    [],
+  );
+
+  const finishScan = useCallback(async (): Promise<boolean> => {
+    if (!sessionId || finishingRef.current) return false;
+
+    const items = Object.values(capturesRef.current).filter(
+      (item) => item.countedQuantity >= 0 || item.isSurplus,
+    );
+    if (items.length === 0) {
+      showError("Debes revisar al menos un artículo antes de finalizar");
+      return false;
+    }
+
+    finishingRef.current = true;
+    setIsFinishing(true);
+    setSyncStatus("saving");
+    try {
+      await waitForSyncIdle();
+      syncInFlightRef.current = true;
+      const result = await syncPhysicalInventoryItems(sessionId, {
+        replaceAll: true,
+        items: buildSyncPayload(items),
+      });
+      if (result.error) {
+        setSyncStatus("error");
+        showError(result.error.message);
+        return false;
+      }
+      dirtyIdsRef.current.clear();
+      setSyncStatus("saved");
+      return true;
+    } finally {
+      syncInFlightRef.current = false;
+      finishingRef.current = false;
+      setIsFinishing(false);
+    }
+  }, [buildSyncPayload, sessionId, showError, waitForSyncIdle]);
+
+  // Autosave debounced de ítems dirty
+  useEffect(() => {
+    if (!sessionId || !sessionHydrated) return;
+
+    const timer = window.setTimeout(async () => {
+      if (finishingRef.current || syncInFlightRef.current) return;
+
+      const dirtyIds = [...dirtyIdsRef.current];
+      if (dirtyIds.length === 0) return;
+
+      const payloadItems = dirtyIds
+        .map((productId) => capturesRef.current[productId])
+        .filter((item): item is PhysicalInventoryItem => Boolean(item))
+        .map((item) => ({
+          productId: item.productId,
+          systemQuantity: item.systemQuantity,
+          countedQuantity: item.countedQuantity,
+          wasScanned: item.wasScanned,
+          isSurplus: item.isSurplus,
+        }));
+
+      // Removidos: enviar countedQuantity -1 no; omitimos deletes en autosave
+      // (finalize solo cuenta >= 0). Si se eliminó del capture, no está en dirty
+      // con valor — limpiamos dirty y no enviamos.
+      if (payloadItems.length === 0) {
+        dirtyIdsRef.current.clear();
+        return;
+      }
+
+      syncInFlightRef.current = true;
+      setSyncStatus("saving");
+      try {
+        const result = await syncPhysicalInventoryItems(sessionId, {
+          items: payloadItems,
+        });
+        if (result.error) {
+          setSyncStatus("error");
+          showError(result.error.message);
+          return;
+        }
+        for (const id of dirtyIds) {
+          dirtyIdsRef.current.delete(id);
+        }
+        setSyncStatus("saved");
+      } finally {
+        syncInFlightRef.current = false;
+      }
+    }, AUTOSAVE_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [captures, sessionHydrated, sessionId, showError]);
+
+  const markDirty = useCallback((productId: number) => {
+    dirtyIdsRef.current.add(productId);
+  }, []);
 
   const query = useInfiniteQuery({
     queryKey: [
@@ -146,9 +325,10 @@ export function usePhysicalInventoryScan(branchId: number | null) {
           wasScanned: true,
         },
       }));
+      markDirty(item.productId);
       pinProduct(item.productId);
     },
-    [pinProduct],
+    [markDirty, pinProduct],
   );
 
   const visibleItems = useMemo(() => {
@@ -244,6 +424,7 @@ export function usePhysicalInventoryScan(branchId: number | null) {
           },
         };
       });
+      markDirty(productId);
 
       if (countedQuantity < 0) {
         setPinnedIds((prev) => prev.filter((id) => id !== productId));
@@ -252,7 +433,7 @@ export function usePhysicalInventoryScan(branchId: number | null) {
         );
       }
     },
-    [],
+    [markDirty],
   );
 
   const removeLastScanned = useCallback(() => {
@@ -447,15 +628,32 @@ export function usePhysicalInventoryScan(branchId: number | null) {
     }
   }, [query]);
 
+  const session = sessionQuery.data ?? null;
+  const sessionStatus: PhysicalInventoryStatus | null =
+    session?.status ?? null;
+  const zoneName = session?.zoneName ?? null;
+  const sessionLocked =
+    Boolean(sessionId) &&
+    sessionStatus != null &&
+    sessionStatus !== "in_progress";
+
   return {
-    branch,
+    branch: session?.branch ?? branch,
+    zoneName,
+    sessionStatus,
+    sessionLocked,
+    syncStatus,
+    isFinishing,
+    finishScan,
+    sessionHydrated,
     visibleItems,
     reviewedItems,
     catalogTotal,
     lastScanned,
     search,
     setSearch,
-    isLoading: query.isLoading,
+    isLoading:
+      query.isLoading || (Boolean(sessionId) && sessionQuery.isLoading),
     isFetchingNextPage: query.isFetchingNextPage,
     hasNextPage: Boolean(query.hasNextPage),
     fetchNextPage,

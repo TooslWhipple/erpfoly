@@ -1,18 +1,24 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/router";
-import { Stack, Typography } from "@mui/material";
+import { Chip, Stack, Typography } from "@mui/material";
 import { Visibility as VisibilityIcon } from "@mui/icons-material";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Title, TabFilters, TableCrud } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
 import type { SelectFilterOption, TabOption } from "@/components/TabFilters";
-import { PhysicalInventoryBranchModal } from "@/components/PhysicalInventory";
+import {
+  PhysicalInventoryBranchModal,
+  PhysicalInventoryUnifyModal,
+} from "@/components/PhysicalInventory";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { useAuthStore } from "@/store/useAuthStore";
 import { getPhysicalInventories } from "@/services/physical-inventory.service";
 import { getBranchesCatalog } from "@/services/branches.service";
 import type {
   HasVarianceFilter,
   PhysicalInventoryListItem,
+  PhysicalInventoryRecordType,
+  PhysicalInventoryStatus,
 } from "@/types/physical-inventory.types";
 import { formatDate } from "@/utils/date";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
@@ -20,6 +26,7 @@ import {
   PHYSICAL_INVENTORY_CREATE,
   PHYSICAL_INVENTORY_READ,
 } from "@/lib/permissions";
+import { isHighPrivilegeRoleCode } from "@/constants/role-codes";
 import { theme } from "@/styles/theme";
 
 type VarianceTab = "all" | "faltantes" | "sobrantes";
@@ -47,14 +54,38 @@ function formatVarianceValue(value: unknown): ReactNode {
   );
 }
 
+function statusLabel(
+  status: PhysicalInventoryStatus | undefined,
+  recordType: PhysicalInventoryRecordType | undefined,
+): string {
+  if (recordType === "unified_master") return "Inventario unificado";
+  if (status === "unified") return "Concluido unificado";
+  if (status === "in_progress") return "En proceso";
+  return "Completado";
+}
+
+function statusColor(
+  status: PhysicalInventoryStatus | undefined,
+  recordType: PhysicalInventoryRecordType | undefined,
+): "default" | "info" | "success" | "warning" {
+  if (recordType === "unified_master") return "success";
+  if (status === "unified") return "warning";
+  if (status === "in_progress") return "info";
+  return "default";
+}
+
 export default function PhysicalInventoryListPage() {
   const router = useRouter();
   const showError = useSnackbarStore((state) => state.showError);
+  const user = useAuthStore((state) => state.user);
   const [branchModalOpen, setBranchModalOpen] = useState(false);
+  const [unifyModalOpen, setUnifyModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<VarianceTab>("all");
   const [branchFilter, setBranchFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+
+  const canUnify = isHighPrivilegeRoleCode(user?.role);
 
   const { data: branches = [] } = useQuery({
     queryKey: ["branches-catalog", "physical-inventory-filter"],
@@ -92,6 +123,7 @@ export default function PhysicalInventoryListPage() {
     isLoading: loading,
     isError,
     error,
+    refetch,
   } = usePaginatedList<PhysicalInventoryListItem>({
     queryKey: [
       "physical-inventories",
@@ -153,6 +185,34 @@ export default function PhysicalInventoryListPage() {
       format: (_value, row) => row.branch?.name ?? "—",
     },
     {
+      id: "zoneName",
+      label: "Zona/Nombre",
+      size: "md",
+      format: (value, row) =>
+        row.recordType === "unified_master"
+          ? "Inventario maestro"
+          : String(value ?? "—"),
+    },
+    {
+      id: "responsibleUser",
+      label: "Responsable",
+      size: "md",
+      format: (value) => String(value ?? "—"),
+    },
+    {
+      id: "status",
+      label: "Estatus",
+      size: "md",
+      format: (_value, row) => (
+        <Chip
+          size="small"
+          label={statusLabel(row.status, row.recordType)}
+          color={statusColor(row.status, row.recordType)}
+          variant="outlined"
+        />
+      ),
+    },
+    {
       id: "totalProducts",
       label: "Total de productos",
       type: "number",
@@ -190,6 +250,29 @@ export default function PhysicalInventoryListPage() {
     },
   ];
 
+  const filterActions = [
+    ...(canUnify
+      ? [
+          {
+            label: "Unificar inventarios",
+            onClick: () => setUnifyModalOpen(true),
+            variant: "outlined" as const,
+            color: "primary" as const,
+            showIcon: false,
+            permission: PHYSICAL_INVENTORY_CREATE,
+          },
+        ]
+      : []),
+    {
+      label: "Nuevo",
+      onClick: () => setBranchModalOpen(true),
+      variant: "contained" as const,
+      color: "primary" as const,
+      showIcon: true,
+      permission: PHYSICAL_INVENTORY_CREATE,
+    },
+  ];
+
   return (
     <Stack spacing={3}>
       <Title title="Inventarios" />
@@ -222,16 +305,7 @@ export default function PhysicalInventoryListPage() {
             setPage(0);
           },
         }}
-        actions={[
-          {
-            label: "Nuevo",
-            onClick: () => setBranchModalOpen(true),
-            variant: "contained",
-            color: "primary",
-            showIcon: true,
-            permission: PHYSICAL_INVENTORY_CREATE,
-          },
-        ]}
+        actions={filterActions}
       />
 
       <TableCrud
@@ -253,12 +327,26 @@ export default function PhysicalInventoryListPage() {
       <PhysicalInventoryBranchModal
         open={branchModalOpen}
         onClose={() => setBranchModalOpen(false)}
-        onConfirm={(branch) => {
+        onConfirm={({ branch, sessionId }) => {
           setBranchModalOpen(false);
           void router.push({
             pathname: "/inventario-fisico/nuevo",
-            query: { sucursalId: String(branch.id) },
+            query: {
+              sucursalId: String(branch.id),
+              sessionId: String(sessionId),
+            },
           });
+        }}
+      />
+
+      <PhysicalInventoryUnifyModal
+        open={unifyModalOpen}
+        onClose={() => setUnifyModalOpen(false)}
+        initialBranchId={branchId}
+        onUnified={(masterId) => {
+          setUnifyModalOpen(false);
+          void refetch?.();
+          void router.push(`/inventario-fisico/${masterId}`);
         }}
       />
     </Stack>

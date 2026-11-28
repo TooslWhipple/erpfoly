@@ -1,5 +1,10 @@
 export { PhysicalInventoryBranchModal } from "./PhysicalInventoryBranchModal";
-export type { PhysicalInventoryBranchModalProps } from "./PhysicalInventoryBranchModal";
+export type {
+  PhysicalInventoryBranchModalProps,
+  PhysicalInventoryBranchModalConfirm,
+} from "./PhysicalInventoryBranchModal";
+export { PhysicalInventoryUnifyModal } from "./PhysicalInventoryUnifyModal";
+export type { PhysicalInventoryUnifyModalProps } from "./PhysicalInventoryUnifyModal";
 export { PhysicalInventoryScanner } from "./PhysicalInventoryScanner";
 export type { PhysicalInventoryScannerProps } from "./PhysicalInventoryScanner";
 export { PhysicalInventoryScanItemRow } from "./PhysicalInventoryScanItemRow";

@@ -10,10 +10,16 @@ export const TabsWrapper = styled("div", {
     justifyContent: "flex-start",
     alignItems: "center",
     height: 36,
-    width: contained || fullWidth ? "100%" : "max-content",
+    width: fullWidth ? "100%" : contained ? "100%" : "max-content",
     maxWidth: "100%",
     minWidth: 0,
     boxSizing: "border-box",
+    ...(contained &&
+      !fullWidth && {
+        [theme.breakpoints.up("sm")]: {
+          width: "max-content",
+        },
+      }),
     backgroundColor: theme.palette.app.segmentControl.background,
     borderRadius: 10,
     padding: "0 4px",

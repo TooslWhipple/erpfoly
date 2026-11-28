@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import {
   Button,
@@ -40,6 +40,7 @@ export default function ConfirmarInventarioFisicoPage() {
     "loading" | "ready" | "empty" | "saving"
   >("loading");
   const [activeTab, setActiveTab] = useState<ConfirmTab>("resumen");
+  const savingRef = useRef(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -91,12 +92,14 @@ export default function ConfirmarInventarioFisicoPage() {
   };
 
   const handleSave = async () => {
-    if (!draft) return;
+    if (!draft || savingRef.current) return;
+    savingRef.current = true;
     setStatus("saving");
     const reviewedItems = draft.items.filter(
       (item) => item.countedQuantity >= 0,
     );
     if (!reviewedItems.length) {
+      savingRef.current = false;
       setStatus("ready");
       showError("Debes revisar al menos un artículo antes de guardar");
       return;
@@ -114,6 +117,7 @@ export default function ConfirmarInventarioFisicoPage() {
       })),
     });
     if (syncResult.error) {
+      savingRef.current = false;
       setStatus("ready");
       showError(syncResult.error.message);
       return;
@@ -122,6 +126,7 @@ export default function ConfirmarInventarioFisicoPage() {
     const result = await finalizePhysicalInventorySession(draft.sessionId);
 
     if (result.error) {
+      savingRef.current = false;
       setStatus("ready");
       showError(result.error.message);
       return;
@@ -182,8 +187,13 @@ export default function ConfirmarInventarioFisicoPage() {
           color="primary"
           onClick={() => void handleSave()}
           disabled={status === "saving"}
+          startIcon={
+            status === "saving" ? (
+              <CircularProgress size={18} color="inherit" />
+            ) : undefined
+          }
         >
-          {status === "saving" ? "Guardando..." : "Confirmar y guardar"}
+          {status === "saving" ? "Guardando…" : "Confirmar y guardar"}
         </Button>
       </Stack>
 

@@ -260,7 +260,17 @@ export function TabFilters({
 
   if (tabs.length > 0 && !hasToolbar) {
     return (
-      <Stack sx={{ width: "100%", maxWidth: "100%", minWidth: 0 }}>
+      <Stack
+        sx={{
+          width: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
+          alignItems: {
+            xs: isContainedLayout ? "stretch" : "flex-start",
+            sm: "flex-start",
+          },
+        }}
+      >
         <HorizontalTabs
           tabs={tabs}
           activeTab={activeTab}

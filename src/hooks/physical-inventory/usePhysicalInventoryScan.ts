@@ -103,6 +103,9 @@ export function usePhysicalInventoryScan(
   >("idle");
   const [sessionHydrated, setSessionHydrated] = useState(!sessionId);
   const dirtyIdsRef = useRef<Set<number>>(new Set());
+  const syncInFlightRef = useRef(false);
+  const finishingRef = useRef(false);
+  const [isFinishing, setIsFinishing] = useState(false);
   const capturesRef = useRef(captures);
   capturesRef.current = captures;
   const debouncedSearch = useDebouncedValue(search.trim(), 300);
@@ -155,11 +158,69 @@ export function usePhysicalInventoryScan(
     }
   }, [sessionQuery.error, sessionQuery.isError, showError]);
 
+  const waitForSyncIdle = useCallback(async () => {
+    while (syncInFlightRef.current) {
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, 50);
+      });
+    }
+  }, []);
+
+  const buildSyncPayload = useCallback(
+    (items: PhysicalInventoryItem[]) =>
+      items.map((item) => ({
+        productId: item.productId,
+        systemQuantity: item.systemQuantity,
+        countedQuantity: item.countedQuantity,
+        wasScanned: item.wasScanned,
+        isSurplus: item.isSurplus,
+      })),
+    [],
+  );
+
+  const finishScan = useCallback(async (): Promise<boolean> => {
+    if (!sessionId || finishingRef.current) return false;
+
+    const items = Object.values(capturesRef.current).filter(
+      (item) => item.countedQuantity >= 0 || item.isSurplus,
+    );
+    if (items.length === 0) {
+      showError("Debes revisar al menos un artículo antes de finalizar");
+      return false;
+    }
+
+    finishingRef.current = true;
+    setIsFinishing(true);
+    setSyncStatus("saving");
+    try {
+      await waitForSyncIdle();
+      syncInFlightRef.current = true;
+      const result = await syncPhysicalInventoryItems(sessionId, {
+        replaceAll: true,
+        items: buildSyncPayload(items),
+      });
+      if (result.error) {
+        setSyncStatus("error");
+        showError(result.error.message);
+        return false;
+      }
+      dirtyIdsRef.current.clear();
+      setSyncStatus("saved");
+      return true;
+    } finally {
+      syncInFlightRef.current = false;
+      finishingRef.current = false;
+      setIsFinishing(false);
+    }
+  }, [buildSyncPayload, sessionId, showError, waitForSyncIdle]);
+
   // Autosave debounced de ítems dirty
   useEffect(() => {
     if (!sessionId || !sessionHydrated) return;
 
     const timer = window.setTimeout(async () => {
+      if (finishingRef.current || syncInFlightRef.current) return;
+
       const dirtyIds = [...dirtyIdsRef.current];
       if (dirtyIds.length === 0) return;
 
@@ -182,19 +243,24 @@ export function usePhysicalInventoryScan(
         return;
       }
 
+      syncInFlightRef.current = true;
       setSyncStatus("saving");
-      const result = await syncPhysicalInventoryItems(sessionId, {
-        items: payloadItems,
-      });
-      if (result.error) {
-        setSyncStatus("error");
-        showError(result.error.message);
-        return;
+      try {
+        const result = await syncPhysicalInventoryItems(sessionId, {
+          items: payloadItems,
+        });
+        if (result.error) {
+          setSyncStatus("error");
+          showError(result.error.message);
+          return;
+        }
+        for (const id of dirtyIds) {
+          dirtyIdsRef.current.delete(id);
+        }
+        setSyncStatus("saved");
+      } finally {
+        syncInFlightRef.current = false;
       }
-      for (const id of dirtyIds) {
-        dirtyIdsRef.current.delete(id);
-      }
-      setSyncStatus("saved");
     }, AUTOSAVE_DEBOUNCE_MS);
 
     return () => window.clearTimeout(timer);
@@ -577,6 +643,8 @@ export function usePhysicalInventoryScan(
     sessionStatus,
     sessionLocked,
     syncStatus,
+    isFinishing,
+    finishScan,
     sessionHydrated,
     visibleItems,
     reviewedItems,

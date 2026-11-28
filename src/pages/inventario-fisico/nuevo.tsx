@@ -53,6 +53,8 @@ export default function NuevoInventarioFisicoPage() {
     zoneName,
     sessionLocked,
     syncStatus,
+    isFinishing,
+    finishScan,
     visibleItems,
     reviewedItems,
     catalogTotal,
@@ -86,10 +88,13 @@ export default function NuevoInventarioFisicoPage() {
     void router.push("/inventario-fisico");
   };
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
     if (!branchId || !branch || !sessionId || reviewedItems.length === 0) {
       return;
     }
+
+    const synced = await finishScan();
+    if (!synced) return;
 
     const draft: PhysicalInventoryScanDraft = {
       sessionId,
@@ -104,6 +109,9 @@ export default function NuevoInventarioFisicoPage() {
     sessionStorage.setItem(PHYSICAL_INVENTORY_DRAFT_KEY, JSON.stringify(draft));
     void router.push("/inventario-fisico/nuevo/confirmar");
   };
+
+  const finishDisabled =
+    isLoading || isFinishing || reviewedItems.length === 0;
 
   if (!router.isReady) {
     return (
@@ -152,21 +160,19 @@ export default function NuevoInventarioFisicoPage() {
         spacing={2}
       >
         <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
-        <Stack direction="row" spacing={1} alignItems="center">
-          {syncStatus === "saving" ? (
-            <Typography variant="caption" color="text.secondary">
-              Guardando…
-            </Typography>
-          ) : null}
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleFinish}
-            disabled={isLoading || reviewedItems.length === 0}
-          >
-            Finalizar escaneo
-          </Button>
-        </Stack>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => void handleFinish()}
+          disabled={finishDisabled}
+          startIcon={
+            isFinishing ? (
+              <CircularProgress size={18} color="inherit" />
+            ) : undefined
+          }
+        >
+          {isFinishing ? "Guardando…" : "Finalizar escaneo"}
+        </Button>
       </Stack>
 
       <Typography variant="h5" fontWeight={700}>
